@@ -1,0 +1,73 @@
+node:
+  topic: readme - documentation
+  goal: document marketplace installation and code-review plugin features
+  delta_s: 0.15
+  zone: safe
+  lambda: convergent
+  insight: documentation addition reduces marketplace discovery friction
+  type: soft
+  bridge: undocumented structure → user-facing documentation
+  speculative: no
+  metrics:
+    W_c: -0.25
+    P: 0.90
+    E_res: 0.92
+    BBMC_residue: 0.02
+    infrastructure_enhancement: documentation enables marketplace adoption
+
+analysis:
+  delta_s:
+    value: 0.15
+    zone: safe
+    impact: |
+      Single documentation file, no code changes.
+      Adds clarity and reduces user uncertainty.
+      Pure information addition with high utility.
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Documenting existing structure, not exploring new space.
+      Organizing knowledge into standard README format.
+      Reducing entropy: unknown marketplace → documented usage.
+
+  bbpf:
+    bridge: marketplace-structure → documented-marketplace
+    paths:
+      - path_1: "Installation instructions"
+      - path_2: "Plugin feature overview"
+      - path_3: "Repository structure diagram"
+
+  bbmc:
+    residue: 0.02
+    assessment: |
+      Minimal residue. Clean documentation.
+      No duplication of existing content.
+      Focused on essential information only.
+
+  semantic_bridge:
+    from: |
+      Repository with marketplace structure but no README.
+      Users must inspect .claude-plugin/marketplace.json to discover.
+    to: |
+      Repository with comprehensive documentation.
+      Installation: /plugin marketplace add Laiff/claude-marketplace
+      Features: 11 agents, 4 protocols, 10 quality guards documented.
+
+delta_s_calculation:
+  new_documentation: 0.12
+  user_clarity_gain: 0.05
+  no_code_changes: -0.02
+  total: 0.15
+  reasoning: |
+    Documentation-only change with minimal semantic distance:
+    - New README file: +0.12 (standard documentation pattern)
+    - Clarity improvement: +0.05 (reduces discovery friction)
+    - No behavior/code changes: -0.02 (pure information)
+
+memory:
+  action: soft_record
+  reason: |
+    Soft node: standard documentation addition.
+    Documents v1.0.0 marketplace and code-review v4.0.0.
+    Pattern for future plugin documentation.
