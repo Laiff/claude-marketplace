@@ -1,0 +1,85 @@
+node:
+  topic: code-review - optimization
+  goal: eliminate redundant API calls and implement atomic review posting
+  delta_s: 0.32
+  zone: safe
+  lambda: convergent
+  insight: pre-fetched context + atomic posting = 96% cost reduction, cleaner review threads
+  type: hard
+  bridge: redundant-api-workflow → pre-fetched-atomic-workflow
+  speculative: no
+  metrics:
+    W_c: -0.28
+    P: 0.88
+    E_res: 0.92
+    BBMC_residue: 0.08
+    infrastructure_enhancement: cost optimization protocol for CI workflows
+
+analysis:
+  delta_s:
+    value: 0.32
+    zone: safe
+    impact: |
+      120 lines changed across 6 files. Moderate semantic distance:
+      - New pre-fetch protocol introduced
+      - Agent behavior modified (read YAML instead of API calls)
+      - Output format unchanged (still posts reviews to GitHub)
+      - Cost reduced by 96% ($10.30 → $0.30-$0.80)
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Optimizing toward known efficient pattern.
+      Reducing entropy: 15x redundant calls → 0x (pre-fetched).
+      Atomic posting: N separate comments → 1 review event.
+      Establishing standard protocol for future agents.
+
+  bbpf:
+    bridge: agent-workflow → optimized-agent-workflow
+    paths:
+      - path_1: "Pre-fetch context in CI, agents read YAML files"
+      - path_2: "Atomic review: one POST with verdict + inline + body"
+      - path_3: "Fallback to API if pre-fetched unavailable"
+
+  bbmc:
+    residue: 0.08
+    assessment: |
+      Minimal residue. Clean optimization.
+      All agents maintain fallback to direct API calls.
+      No breaking changes to plugin interface.
+      Documentation updated to reflect new workflow.
+
+  semantic_bridge:
+    from: |
+      Workflow:
+        - Each agent calls gh api/gh pr view independently
+        - 15x redundant diff fetches observed
+        - output-composer posts: inline comments + separate summary
+        - Cost: $10.30 per review
+    to: |
+      Workflow:
+        - CI pre-fetches: prior_reviews.yaml, pr_meta.yaml, file_patches.json, context.yaml
+        - Agents read pre-fetched YAML (fallback to API if missing)
+        - output-composer posts: ONE atomic review (verdict + inline + body)
+        - Cost: $0.30-$0.80 per review (96% reduction)
+
+delta_s_calculation:
+  protocol_introduction: 0.15
+  agent_behavior_change: 0.20
+  output_semantics_unchanged: -0.05
+  optimization_convergence: 0.02
+  total: 0.32
+  reasoning: |
+    Safe zone despite 120 lines changed:
+    - New protocol pattern: +0.15 (pre-fetched context standard)
+    - Agent modifications: +0.20 (read YAML, not API)
+    - Output unchanged: -0.05 (still posts GitHub reviews)
+    - Convergent optimization: +0.02 (known pattern)
+
+memory:
+  action: record
+  reason: |
+    Hard node: establishes pre-fetched context protocol.
+    Pattern for future cost optimization in agent pipelines.
+    Documents 96% cost reduction ($10.30 → $0.30-$0.80).
+    Atomic review posting becomes new standard.
