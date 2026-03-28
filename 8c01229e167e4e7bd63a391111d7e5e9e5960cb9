@@ -1,0 +1,86 @@
+node:
+  topic: code-review - documentation
+  goal: clarify --post flag vs verdict.action independence
+  delta_s: 0.18
+  zone: safe
+  lambda: convergent
+  insight: flag name --comment implied verdict control, --post clarifies it only controls posting
+  type: soft
+  bridge: ambiguous-flag-semantics → explicit-flag-verdict-separation
+  speculative: no
+  metrics:
+    W_c: -0.15
+    P: 0.90
+    E_res: 0.85
+    BBMC_residue: 0.03
+    infrastructure_enhancement: clear documentation prevents flag misuse
+
+analysis:
+  delta_s:
+    value: 0.18
+    zone: safe
+    impact: |
+      28 lines changed across 3 documentation files.
+      Safe zone - pure documentation clarification:
+      - Flag renamed --comment → --post
+      - Added explicit distinction sections
+      - No code changes, no behavior changes
+      - Clarifies existing semantics
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Converging toward clear, unambiguous documentation.
+      Reducing confusion: misleading flag name → accurate flag name.
+      Establishing explicit distinction between independent concepts.
+      Standard documentation pattern for preventing misuse.
+
+  bbpf:
+    bridge: documentation → clarified-documentation
+    paths:
+      - path_1: "Rename flag to match semantic purpose (--post)"
+      - path_2: "Add explicit distinction sections"
+      - path_3: "Document independence of flag and verdict"
+
+  bbmc:
+    residue: 0.03
+    assessment: |
+      Minimal residue. Clean documentation update.
+      No duplication or contradictions.
+      Consistent terminology across all 3 files.
+      Clear separation of concerns documented.
+
+  semantic_bridge:
+    from: |
+      Flag semantics:
+        - Named --comment (misleading)
+        - Users might think it controls event type (COMMENT vs APPROVE)
+        - No explicit documentation of flag vs verdict independence
+        - Ambiguous: does --comment mean "post a COMMENT verdict"?
+    to: |
+      Flag semantics:
+        - Named --post (accurate - controls whether to post)
+        - Explicit documentation: flag = WHETHER, verdict.action = EVENT TYPE
+        - Multiple sections emphasizing independence
+        - Clear: --post just gates posting, verdict is always computed by Phase 4
+
+delta_s_calculation:
+  flag_rename: 0.10
+  documentation_addition: 0.08
+  no_code_changes: -0.05
+  clarification_convergence: 0.05
+  total: 0.18
+  reasoning: |
+    Safe zone for documentation clarification:
+    - Flag rename: +0.10 (terminology change, semantic clarity)
+    - Doc sections added: +0.08 (new explanatory content)
+    - No code/behavior changes: -0.05 (pure documentation)
+    - Convergent clarification: +0.05 (reduces ambiguity)
+
+memory:
+  action: soft_record
+  reason: |
+    Soft node: documentation clarification pattern.
+    Documents critical distinction: posting control vs event type.
+    Prevents common misunderstanding of flag purpose.
+    --post flag name is more accurate than --comment.
