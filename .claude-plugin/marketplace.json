@@ -3,7 +3,7 @@
   "description": "Personal Claude Code plugin marketplace — research-driven plugins for code review, agent orchestration, and developer workflows",
   "owner": {
     "name": "Laiff",
-    "email": null,
+    "email": "me@laiff.pro",
     "url": "https://github.com/Laiff"
   },
   "metadata": {
