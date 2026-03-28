@@ -17,8 +17,8 @@ Evaluate in order. Stop on the first failure:
 2. **PR is a draft** — stop, not ready for review
 3. **PR is trivial automation** — version bump, lock file update, auto-generated migration,
    dependabot or renovate PR with no source code changes — stop
-4. **Bot already reviewed this commit** — check for comments by `github-actions[bot]`
-   on the current HEAD SHA. If found and no new commits since, stop.
+4. **Bot already reviewed this commit** — check for a **review event** (not inline comments)
+   by `github-actions[bot]` submitted at the current HEAD SHA. If found, stop.
 
 ## Important exceptions
 
@@ -37,10 +37,30 @@ Evaluate in order. Stop on the first failure:
 # PR state
 gh pr view {number} --repo {owner/repo} --json state,isDraft,headRefOid
 
-# Existing bot comments on current SHA
-gh api repos/{owner}/{repo}/pulls/{number}/comments \
-  --jq '[.[] | select(.user.login == "github-actions[bot]")] | length'
+# Prior bot reviews at current HEAD
+gh api repos/{owner}/{repo}/pulls/{number}/reviews \
+  --jq '[.[] | select(.user.login == "github-actions[bot]")] | map({id, state, commit_id, body})'
 ```
+
+### Prior review detection rules
+
+**CRITICAL: Use the reviews endpoint, NOT the comments endpoint.**
+- `GET /pulls/{number}/reviews` returns review events with a `commit_id` that is
+  frozen at submission time — it does NOT shift when new commits are pushed.
+- `GET /pulls/{number}/comments` returns inline review comments whose `commit_id`
+  is updated by GitHub to track the latest commit. This makes old comments appear
+  to belong to the current HEAD, causing false "already reviewed" gates.
+
+**A prior review counts ONLY if ALL of these are true:**
+1. `commit_id` on the review matches the current HEAD SHA (exact match)
+2. `state` is `CHANGES_REQUESTED`, `APPROVED`, or `COMMENTED`
+3. Review `body` is substantive (length >= 20 chars AND does not match `/^(test|\s*)$/i`)
+
+**Do NOT count as prior review:**
+- Inline comments alone (they are not review events)
+- Reviews with junk bodies ("test", empty, whitespace-only) — these are G1 noise
+  from broken runs and must be ignored
+- Reviews whose `commit_id` does not match current HEAD — they were on a previous push
 
 ## Output
 

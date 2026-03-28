@@ -19,13 +19,26 @@ This data is used by the dedup guard (G3) to prevent re-posting.
 
 2. If `prior_reviews.yaml` is NOT available, fall back to API:
    ```bash
+   # Review events (APPROVE, REQUEST_CHANGES, COMMENT) — commit_id is stable
+   gh api repos/{owner}/{repo}/pulls/{number}/reviews \
+     --jq '.[] | {id, state, commit_id, body: .body[:100], user: .user.login, submitted_at}'
+
+   # Inline review comments — use original_commit_id (not commit_id, which shifts)
    gh api repos/{owner}/{repo}/pulls/{number}/comments \
-     --jq '.[] | {id, path, line: .original_line, body: .body[:100], user: .user.login, created_at}'
+     --jq '.[] | {id, path, line: .original_line, original_commit_id, body: .body[:100], user: .user.login, created_at}'
    ```
    ```bash
+   # PR-level issue comments
    gh api repos/{owner}/{repo}/issues/{number}/comments \
      --jq '.[] | {id, body: .body[:100], user: .user.login, created_at}'
    ```
+
+   **CRITICAL:** When using the comments endpoint, always use `original_commit_id`
+   (not `commit_id`) to determine which push a comment belongs to. GitHub updates
+   `commit_id` as new commits arrive, making old comments appear current.
+
+   **Filter out junk:** Ignore bot comments with body matching `/^(test|\s*)$/i`
+   or body length < 20 chars — these are G1 noise from broken runs.
 
 3. From either source, extract bot comments and build dedup index
 
