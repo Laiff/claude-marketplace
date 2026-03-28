@@ -28,6 +28,11 @@ Evaluate in order. Stop on the first failure:
 
 ## How to check
 
+**Preferred — use pre-fetched data:**
+- Read `.claude-review-context/pr_meta.yaml` for PR state (title, body, files, SHAs)
+- Read `.claude-review-context/prior_reviews.yaml` for existing bot reviews and threads
+
+**Fallback — if pre-fetched data unavailable:**
 ```bash
 # PR state
 gh pr view {number} --repo {owner/repo} --json state,isDraft,headRefOid

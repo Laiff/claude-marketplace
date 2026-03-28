@@ -1,13 +1,13 @@
 ---
 model: sonnet
-description: "Compose and post the final review — terminal summary, inline comments, PR summary"
-tools: Read, Write, Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh api:*), Bash(python3:*), Bash(cat:*)
+description: "Compose and post the final review — terminal summary and single atomic review"
+tools: Read, Write, Bash(gh pr review:*), Bash(gh api:*), Bash(python3:*), Bash(cat:*)
 ---
 
 # Output Composer Agent
 
 Take the validated, deduplicated, budget-constrained findings and produce the
-final review output: terminal summary, inline comments, and PR summary.
+final review output: terminal summary and a single atomic GitHub review.
 
 ## Input
 
@@ -16,10 +16,10 @@ You receive as YAML from the orchestrator:
 - Review verdict with classification (from dedup-orchestrator) — see `protocols/review-verdict.md`
 - Pipeline stats (from dedup-orchestrator)
 - PR summary (from pr-summarizer)
-- Head SHA (for permalink URLs)
-- Repository name (owner/repo)
-- PR number
 - Whether `--comment` flag was provided
+
+For head SHA, repo, and PR number: read `.claude-review-context/context.yaml` (structured envelope).
+For diff positions: read `.claude-review-context/file_patches.json` (pre-fetched patches).
 
 ## Step 1: Terminal Summary (ALWAYS)
 
@@ -68,14 +68,26 @@ If `--comment` was NOT provided, stop here.
 For EACH finding about to be posted, verify:
 1. Body length >= 20 characters (Guard G1)
 2. Body does NOT match `/^(test|\s*)$/i` (Guard G1)
-3. Line number is in the PR diff (Guard G2)
-4. No existing comment with >80% similarity on same (path, line) (Guard G3)
+3. No existing comment with >80% similarity on same (path, line) (Guard G3)
 
 Drop any finding that fails pre-post validation.
 
+### Classify Findings by Postability
+
+Split findings into two groups:
+
+**Inlineable** — finding line is inside a diff hunk (can be posted as inline review comment):
+- Check against `.claude-review-context/file_patches.json` if available
+- Or parse hunk headers from `.claude-review-context/diff.txt`
+- A line is inlineable if it appears as a `+` or context line in any hunk of the PR diff
+
+**Non-inlineable** — finding line is NOT in the diff (e.g., unchanged code, batched findings):
+- These go into the review **body** as a "Additional findings" section
+- Do NOT post these as separate PR comments
+
 ### Compose Inline Comments
 
-For each finding, format the comment body:
+For each **inlineable** finding, format the comment body:
 
 ```markdown
 **{description}**
@@ -94,73 +106,80 @@ Rules for suggestion blocks:
 - If the fix is larger, describe it in prose
 
 **For batched findings** (batch_key is set):
-```markdown
-**[Convention violation]** — Found in N files
+- Include in the review body under "Additional findings", listing all affected files
+- Do NOT post as a separate PR comment
 
-Convention N: *"rule text"* from [`CLAUDE.md`](link)
+### Compose Review Body
 
-Affected files:
-- `file1.tsx` (line 42)
-- `file2.tsx` (line 15)
-- `file3.tsx` (line 88)
+Build a single review body that includes:
+1. Classification header: `## Code Review — {icon} {classification} — {verdict_label}`
+2. Verdict reasoning
+3. Finding summary table (all findings, both inline and non-inlineable)
+4. **Non-inlineable findings section** (if any findings couldn't be posted inline):
+   ```markdown
+   ### Additional Findings (not in diff)
+
+   **[NORM] Convention** — `.github/workflows/file.yml` (~line 12)
+   Description of the finding...
+   ```
+5. Pipeline stats: `Phase 2 produced N -> Phase 3 validated M -> Phase 4 deduped to K`
+
+This review body is the ONLY summary. Do NOT post a separate summary comment.
+
+### Determine Diff Positions
+
+For inline comments, the GitHub review API requires diff-relative positions.
+
+**Preferred:** Read `.claude-review-context/file_patches.json` (pre-fetched) and count
+position within the patch string for the target line. Position 1 = first line of the patch.
+
+**Fallback:** If `file_patches.json` is not available, fetch via:
+```bash
+gh api repos/{owner}/{repo}/pulls/{number}/files --jq '.[].patch'
 ```
-Post this as a single PR-level comment, NOT inline.
 
-### Posting Fallback Chain
+### Posting — Single Atomic Review
 
-Try each method in order, move to next on failure.
-The `event` field and `gh pr review` flag are determined by `verdict.action`.
+Post exactly ONE GitHub review combining verdict + inline comments + body.
+The `event` field is determined by `verdict.action`.
 
 **Map verdict to GitHub review event:**
 - `APPROVE` -> event: `APPROVE`, flag: `--approve`
 - `REQUEST_CHANGES` -> event: `REQUEST_CHANGES`, flag: `--request-changes`
 - `COMMENT` -> event: `COMMENT`, flag: `--comment`
 
-1. **gh api POST (preferred — atomic verdict + inline comments):**
-   ```bash
-   # Build payload.json with verdict event and inline comments
-   # {
-   #   "event": "REQUEST_CHANGES",  <-- from verdict.action
-   #   "body": "## Code Review — :shield: Security\n\n...",
-   #   "comments": [{"path": "...", "line": N, "body": "..."}]
-   # }
-   gh api repos/{owner}/{repo}/pulls/{number}/reviews \
-     --method POST --input payload.json
-   ```
-
-2. **Python utility (if available):**
-   ```bash
-   python3 .claude-review-context/post_review.py payload.json {owner/repo} {number}
-   ```
-
-3. **gh pr review fallback (verdict only, no inline comments):**
-   ```bash
-   # APPROVE
-   gh pr review {number} --repo {owner/repo} --approve --body-file review.md
-
-   # REQUEST_CHANGES
-   gh pr review {number} --repo {owner/repo} --request-changes --body-file review.md
-
-   # COMMENT (default fallback)
-   gh pr review {number} --repo {owner/repo} --comment --body-file review.md
-   ```
-
-**Important:** When using fallback method 3, inline comments cannot be posted atomically
-with the verdict. Post them separately via `gh api` individual comment calls, then
-post the verdict review.
-
-### Summary Comment
-
-After the review (with verdict), post ONE summary comment with classification:
+**Method 1 — gh api POST (preferred — atomic):**
 ```bash
-gh pr comment {number} --repo {owner/repo} --body-file summary.md
+# Build payload.json:
+# {
+#   "commit_id": "<head_sha>",
+#   "event": "REQUEST_CHANGES",
+#   "body": "## Code Review — :shield: Security — Request Changes\n\n...",
+#   "comments": [
+#     {"path": "file.ts", "position": 7, "body": "..."}
+#   ]
+# }
+gh api repos/{owner}/{repo}/pulls/{number}/reviews \
+  --method POST --input payload.json
 ```
 
-The summary comment body should include:
-- Classification icon and label
-- Verdict action and reasoning
-- Finding table (if any)
-- Pipeline stats
+**Method 2 — Python utility fallback:**
+```bash
+python3 .claude-review-context/post_review.py payload.json {owner/repo} {number}
+```
+
+**Method 3 — gh pr review fallback (verdict only, no inline comments):**
+```bash
+gh pr review {number} --repo {owner/repo} --approve --body-file review.md
+gh pr review {number} --repo {owner/repo} --request-changes --body-file review.md
+gh pr review {number} --repo {owner/repo} --comment --body-file review.md
+```
+
+### Output Rules
+
+- **ONE review** — never post more than one GitHub review event per pipeline run
+- **ZERO separate comments** — no `gh pr comment` calls. Everything goes in the review body or as inline comments within the review
+- **Non-inlineable findings in body** — if a finding can't be an inline comment, include it in the review body text
 
 ## Step 3: Capture Feedback Signals
 

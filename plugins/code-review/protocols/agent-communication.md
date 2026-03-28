@@ -236,10 +236,13 @@ comment_flag: true
 The biggest cost driver in production was redundant diff fetching (approximately 15x in one $10.30 trace).
 
 1. **Diff is pre-fetched** at `.claude-review-context/diff.txt` — NEVER run `gh pr diff`
-2. **PR metadata is pre-fetched** at `.claude-review-context/pr_meta.json` — NEVER run `gh pr view` for metadata
-3. **Phase 1 output is the single source of truth** — Phase 2 agents MUST use the context object, not re-fetch from GitHub API
-4. **Convention text is in context** — do not re-read CLAUDE.md files in Phase 2 or later
-5. **Head SHA is in pr_summary** — do not run `git rev-parse HEAD`
+2. **PR metadata is pre-fetched** at `.claude-review-context/pr_meta.yaml` (YAML format) — NEVER run `gh pr view` for metadata
+3. **Prior reviews are pre-fetched** at `.claude-review-context/prior_reviews.yaml` — contains threads, reactions, signal classification. Comment-scanner MUST read this first, NEVER call `gh api .../comments` directly
+4. **Diff patch positions are pre-fetched** at `.claude-review-context/file_patches.json` — output-composer MUST read this instead of calling `gh api .../pulls/{number}/files`
+5. **Structured context envelope** at `.claude-review-context/context.yaml` — repo, PR number, head SHA, file counts, index of all pre-fetched files
+6. **Phase 1 output is the single source of truth** — Phase 2 agents MUST use the context object, not re-fetch from GitHub API
+7. **Convention text is in context** — do not re-read CLAUDE.md files in Phase 2 or later
+8. **Head SHA is in context.yaml and pr_summary** — do not run `git rev-parse HEAD`
 
 Estimated cost per review with this protocol: $0.30-$0.80 (vs $10.30 without optimization).
 
@@ -261,6 +264,8 @@ Pipeline summary:
   Phase 3: 10 validated, 5 dropped (low_conf: 3, contradicted: 1, rule_missing: 1)
   Phase 4: 4 final (dedup: -3, batch: -2, budget: -1)
   Verdict: REQUEST_CHANGES (security) — rule V1, calibration: none
-  Phase 5: 4 comments posted, review submitted as REQUEST_CHANGES
+  Phase 5: 1 review posted (3 inline + 1 in body), event: REQUEST_CHANGES
   Total duration: 45s
 ```
+
+Phase 5 posts exactly ONE review — no separate summary comment.

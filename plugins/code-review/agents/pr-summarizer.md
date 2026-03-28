@@ -12,7 +12,7 @@ to understand the INTENT behind the changes, not just the mechanics.
 ## Steps
 
 1. Read PR metadata:
-   - If `.claude-review-context/pr_meta.json` exists, use it
+   - If `.claude-review-context/pr_meta.yaml` exists, use it (YAML format)
    - Otherwise: `gh pr view {number} --repo {owner/repo} --json title,body,files,additions,deletions`
 
 2. Read the diff:

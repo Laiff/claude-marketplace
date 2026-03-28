@@ -1,7 +1,7 @@
 ---
 model: haiku
 description: "Scan existing review comments to build dedup index and prevent re-posting"
-tools: Bash(gh api:*), Bash(gh pr view:*)
+tools: Read, Bash(gh api:*), Bash(gh pr view:*)
 ---
 
 # Comment Scanner Agent
@@ -11,19 +11,23 @@ This data is used by the dedup guard (G3) to prevent re-posting.
 
 ## Steps
 
-1. Fetch existing review comments:
+1. Check for pre-fetched review history (PREFERRED — avoids ALL API calls):
+   - Read `.claude-review-context/prior_reviews.yaml` — contains review threads with
+     paths, lines, conversation bodies, reactions, resolution status, and signal classification
+   - This file is produced by a GraphQL fetch + signal classifier in the CI workflow
+   - Each thread already has a `signal` field: `accepted`, `rejected`, `pending`, `empty`, `resolved`
+
+2. If `prior_reviews.yaml` is NOT available, fall back to API:
    ```bash
    gh api repos/{owner}/{repo}/pulls/{number}/comments \
      --jq '.[] | {id, path, line: .original_line, body: .body[:100], user: .user.login, created_at}'
    ```
-
-2. Fetch existing PR-level comments:
    ```bash
    gh api repos/{owner}/{repo}/issues/{number}/comments \
      --jq '.[] | {id, body: .body[:100], user: .user.login, created_at}'
    ```
 
-3. Filter to bot comments (user contains "[bot]" or is "github-actions[bot]")
+3. From either source, extract bot comments and build dedup index
 
 4. Build a deduplication index
 
@@ -34,22 +38,21 @@ Return your results as a YAML block:
 ```yaml
 existing_comments:
   inline:
-    - id: 12345
-      path: "src/file.tsx"
+    - path: "src/file.tsx"
       line: 42
       body_preview: "First 100 chars of the comment..."
-      user: "github-actions[bot]"
-      created_at: "2026-03-17T07:44:50Z"
+      signal: rejected          # from prior_reviews.yaml signal classification
   pr_level:
-    - id: 67890
-      body_preview: "## Code review\n\nFound 2 issues..."
-      user: "github-actions[bot]"
-      created_at: "2026-03-17T07:50:53Z"
+    - body_preview: "## Code review\n\nFound 2 issues..."
+      signal: accepted
   dedup_keys:
     - "src/file.tsx:42:convention-violation"
     - "src/other.tsx:88:bug-report"
   has_prior_review: true
-  prior_review_sha: "abc123"
+  prior_review_signals:
+    accepted: 3
+    rejected: 1
+    pending: 0
 ```
 
 ## Communication rules

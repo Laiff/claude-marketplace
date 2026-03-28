@@ -64,9 +64,9 @@ Phase 4 ── dedup-orchestrator (haiku)
 │
 Phase 5 ── output-composer (sonnet)
 │   ├─ terminal summary with verdict (always)
-│   ├─ inline comments (--comment flag)
-│   ├─ PR review: APPROVE | REQUEST_CHANGES | COMMENT
-│   └─ PR summary comment (--comment flag)
+│   ├─ single atomic review: APPROVE | REQUEST_CHANGES | COMMENT
+│   ├─ inline comments in review (--comment flag)
+│   └─ non-inlineable findings in review body
 ```
 
 ## Execution
@@ -106,9 +106,11 @@ Each receives all Phase 1 outputs as YAML. Each returns Finding objects per the 
 
 **Phase 5** — Launch `output-composer` agent (sonnet):
 - Terminal summary with verdict and classification (always)
-- Inline comments and PR summary (only with `--comment` flag)
-- Posts review with correct GitHub event: `--approve`, `--request-changes`, or `--comment`
-- Posting fallback chain: gh api (atomic verdict + comments), python utility, gh pr review
+- Posts ONE atomic review with correct GitHub event: `--approve`, `--request-changes`, or `--comment`
+- Inlineable findings become inline review comments within the single review
+- Non-inlineable findings (outside diff) go into the review body text
+- No separate summary comment — everything in one review event
+- Posting fallback chain: gh api (atomic), python utility, gh pr review
 
 ### Inter-Agent Communication
 
