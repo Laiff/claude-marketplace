@@ -20,8 +20,6 @@ Then install individual plugins:
 
 Evidence-driven code review with multi-agent orchestration, feedback-grounded quality guards, and YAML-structured inter-agent communication.
 
-Built from analysis of 35 review runs, 700+ comments, 179 reactions, 84 minimized reviews, and 5 research syntheses across 170+ sources.
-
 **Skill:** `/code-review` — triggers on: review PR, check PR, code review, audit pull request
 
 **Pipeline:**
