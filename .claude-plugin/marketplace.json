@@ -1,0 +1,27 @@
+{
+  "name": "laiff-claude-marketplace",
+  "description": "Personal Claude Code plugin marketplace — research-driven plugins for code review, agent orchestration, and developer workflows",
+  "owner": {
+    "name": "Laiff",
+    "email": null,
+    "url": "https://github.com/Laiff"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "code-review",
+      "source": "./plugins/code-review",
+      "description": "Evidence-driven code review with multi-agent orchestration, feedback-grounded quality guards, and YAML-structured inter-agent communication",
+      "version": "4.0.0",
+      "category": "development",
+      "author": {
+        "name": "Laiff",
+        "url": "https://github.com/Laiff"
+      },
+      "tags": ["code-review", "multi-agent", "evidence-driven", "quality-guards"]
+    }
+  ]
+}
