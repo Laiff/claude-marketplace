@@ -65,7 +65,7 @@ Phase 4 ── dedup-orchestrator (haiku)
 Phase 5 ── output-composer (sonnet)
 │   ├─ terminal summary with verdict (always)
 │   ├─ single atomic review: APPROVE | REQUEST_CHANGES | COMMENT
-│   ├─ inline comments in review (--comment flag)
+│   ├─ inline comments in review (--post flag)
 │   └─ non-inlineable findings in review body
 ```
 
@@ -106,7 +106,8 @@ Each receives all Phase 1 outputs as YAML. Each returns Finding objects per the 
 
 **Phase 5** — Launch `output-composer` agent (sonnet):
 - Terminal summary with verdict and classification (always)
-- Posts ONE atomic review with correct GitHub event: `--approve`, `--request-changes`, or `--comment`
+- If `--post` flag: posts ONE atomic review with correct GitHub event type from `verdict.action`
+- The `--post` flag controls WHETHER to post; `verdict.action` controls the event type (APPROVE / REQUEST_CHANGES / COMMENT) — these are independent
 - Inlineable findings become inline review comments within the single review
 - Non-inlineable findings (outside diff) go into the review body text
 - No separate summary comment — everything in one review event

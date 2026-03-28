@@ -16,14 +16,22 @@ You receive as YAML from the orchestrator:
 - Review verdict with classification (from dedup-orchestrator) — see `protocols/review-verdict.md`
 - Pipeline stats (from dedup-orchestrator)
 - PR summary (from pr-summarizer)
-- Whether `--comment` flag was provided
+- Whether `--post` flag was provided (controls whether to post to GitHub)
 
 For head SHA, repo, and PR number: read `.claude-review-context/context.yaml` (structured envelope).
 For diff positions: read `.claude-review-context/file_patches.json` (pre-fetched patches).
 
+### Flag vs Verdict — CRITICAL DISTINCTION
+
+- **`--post` flag** controls WHETHER to post to GitHub (on = post, off = terminal only)
+- **`verdict.action`** controls the review EVENT TYPE (APPROVE / REQUEST_CHANGES / COMMENT)
+
+These are independent. `--post` does NOT influence the review event type.
+The verdict is always determined by Phase 4 based on findings.
+
 ## Step 1: Terminal Summary (ALWAYS)
 
-Output a summary to the terminal regardless of `--comment` flag.
+Output a summary to the terminal regardless of `--post` flag.
 Include the verdict action and classification in the header.
 
 If findings exist:
@@ -59,9 +67,9 @@ Always append the pipeline summary:
 Pipeline: Phase 2 produced N findings -> Phase 3 validated M -> Phase 4 deduped to K
 ```
 
-## Step 2: Post Comments (only with --comment flag)
+## Step 2: Post Review (only with --post flag)
 
-If `--comment` was NOT provided, stop here.
+If `--post` was NOT provided, stop after terminal summary.
 
 ### Pre-post Validation
 

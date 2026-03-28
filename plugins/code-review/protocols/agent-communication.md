@@ -167,8 +167,13 @@ pr_summary:
 head_sha: "abc123def456..."
 owner_repo: "Owner/Repo"
 pr_number: 1475
-comment_flag: true
+post_flag: true                    # --post flag: controls WHETHER to post to GitHub
 ```
+
+**Flag vs verdict — critical distinction:**
+- `post_flag` (from `--post` CLI argument) controls WHETHER to post to GitHub (true = post, false = terminal only)
+- `verdict.action` controls the review EVENT TYPE (APPROVE / REQUEST_CHANGES / COMMENT)
+- These are INDEPENDENT. The `--post` flag NEVER influences the review event type.
 
 **Verdict rules:**
 - Phase 4 computes the verdict AFTER budget enforcement using the final surviving findings
