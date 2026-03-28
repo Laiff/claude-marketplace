@@ -1,0 +1,81 @@
+node:
+  topic: marketplace - infrastructure
+  goal: transform single-plugin repo into proper Claude Code marketplace
+  delta_s: 0.28
+  zone: safe
+  lambda: convergent
+  insight: directory reorganization + marketplace catalog = zero functional changes, pure structure
+  type: hard
+  bridge: ad-hoc plugin location → standardized marketplace structure
+  speculative: no
+  metrics:
+    W_c: -0.22
+    P: 0.95
+    E_res: 0.88
+    BBMC_residue: 0.05
+    infrastructure_enhancement: marketplace compliance for proper distribution
+
+analysis:
+  delta_s:
+    value: 0.28
+    zone: safe
+    impact: |
+      Large line count (2,087 moved) but minimal semantic distance.
+      Pure directory restructuring + 30-line catalog file.
+      No logic, behavior, or API changes. Infrastructure only.
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Organizing chaotic structure into Claude Code standard.
+      Moving from implicit single-plugin to explicit marketplace.
+      Reducing entropy: unclear structure → documented catalog.
+
+  bbpf:
+    bridge: repository-structure → marketplace-compliant-structure
+    paths:
+      - path_1: "Move plugin to plugins/ subdirectory"
+      - path_2: "Add marketplace.json at .claude-plugin/"
+      - path_3: "Update plugin.json repository field (already done)"
+
+  bbmc:
+    residue: 0.05
+    assessment: |
+      Minimal residue. Clean transformation.
+      Previous commit incorrectly pushed without research.
+      This commit corrects structure after proper research.
+
+  semantic_bridge:
+    from: |
+      Repository structure:
+        code-review/ (plugin at root)
+        .gitignore
+
+      Unclear purpose: plugin or marketplace?
+    to: |
+      Repository structure:
+        .claude-plugin/marketplace.json (catalog)
+        plugins/code-review/ (plugin)
+        .gitignore
+
+      Clear purpose: marketplace with one plugin
+
+delta_s_calculation:
+  structural_change: 0.25
+  new_files: 0.03
+  semantic_clarity_gain: -0.10
+  learning_debt_paid: 0.10
+  total: 0.28
+  reasoning: |
+    Despite 2,087 lines moved, semantic distance is small:
+    - No behavior changes: -0.10 (reduces uncertainty)
+    - New catalog file: +0.03 (minimal new concept)
+    - Directory move: +0.25 (structural reorganization)
+    - Fixed previous error: +0.10 (learning debt)
+
+memory:
+  action: record
+  reason: |
+    Hard node: corrects previous commit that bypassed research.
+    Documents proper marketplace structure for future plugins.
+    Establishes pattern for marketplace expansion.
