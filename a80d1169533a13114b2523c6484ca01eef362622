@@ -1,0 +1,88 @@
+node:
+  topic: code-review - bugfix
+  goal: fix prior review detection using correct GitHub API endpoint
+  delta_s: 0.25
+  zone: safe
+  lambda: convergent
+  insight: GitHub API behavior difference between /comments and /reviews causes false positive detection
+  type: hard
+  bridge: incorrect-api-endpoint → correct-api-endpoint
+  speculative: no
+  metrics:
+    W_c: -0.32
+    P: 0.92
+    E_res: 0.88
+    BBMC_residue: 0.05
+    infrastructure_enhancement: accurate prior review detection eliminates false gates
+
+analysis:
+  delta_s:
+    value: 0.25
+    zone: safe
+    impact: |
+      45 lines added across 2 agent files. Safe zone despite bug fix:
+      - API endpoint corrected (semantic behavior change)
+      - Documentation added explaining GitHub API quirk
+      - Junk filtering rules formalized
+      - No changes to output format or workflow
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Fixing toward correct behavior.
+      Reducing false positives: wrong endpoint → correct endpoint.
+      Establishing accurate detection protocol.
+      Converging on GitHub API best practice.
+
+  bbpf:
+    bridge: api-usage → correct-api-usage
+    paths:
+      - path_1: "Use /reviews endpoint (commit_id frozen)"
+      - path_2: "Use original_commit_id on /comments endpoint"
+      - path_3: "Filter junk reviews (body validation)"
+
+  bbmc:
+    residue: 0.05
+    assessment: |
+      Minimal residue. Clean bug fix.
+      Documentation clarifies GitHub API behavior.
+      No breaking changes to plugin interface.
+      Fallback paths maintained.
+
+  semantic_bridge:
+    from: |
+      Prior review detection:
+        - preflight: checks /comments endpoint for bot comments
+        - comment-scanner: fetches /comments for dedup
+        - Problem: commit_id on comments shifts when new commits pushed
+        - Result: old inline comments appear to belong to current HEAD
+        - Consequence: false "already reviewed this commit" gate
+    to: |
+      Prior review detection:
+        - preflight: checks /reviews endpoint for review events
+        - Uses commit_id from review (frozen at submission time)
+        - comment-scanner: uses original_commit_id on inline comments
+        - Validates review body is substantive (length >= 20, not junk)
+        - Result: accurate detection of which commit was reviewed
+        - Consequence: no false gates, correct re-review trigger
+
+delta_s_calculation:
+  api_endpoint_change: 0.15
+  detection_logic_fix: 0.10
+  documentation_added: 0.05
+  no_workflow_changes: -0.05
+  total: 0.25
+  reasoning: |
+    Safe zone for bug fix:
+    - API endpoint correction: +0.15 (semantic behavior change)
+    - Detection logic fix: +0.10 (false positive elimination)
+    - Documentation: +0.05 (explains GitHub quirk)
+    - Workflow unchanged: -0.05 (still detects prior reviews)
+
+memory:
+  action: record
+  reason: |
+    Hard node: documents critical GitHub API behavior.
+    Fixes false positive detection (already reviewed this commit).
+    Pattern for accurate review history tracking.
+    commit_id on /comments shifts; commit_id on /reviews frozen.
