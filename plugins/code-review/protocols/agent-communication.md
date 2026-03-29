@@ -243,7 +243,7 @@ The biggest cost driver in production was redundant diff fetching (approximately
 1. **Diff is pre-fetched** at `.claude-review-context/diff.txt` — NEVER run `gh pr diff`
 2. **PR metadata is pre-fetched** at `.claude-review-context/pr_meta.yaml` (YAML format) — NEVER run `gh pr view` for metadata
 3. **Prior reviews are pre-fetched** at `.claude-review-context/prior_reviews.yaml` — contains threads, reactions, signal classification. Comment-scanner MUST read this first, NEVER call `gh api .../comments` directly
-4. **Diff patch positions are pre-fetched** at `.claude-review-context/file_patches.json` — output-composer MUST read this instead of calling `gh api .../pulls/{number}/files`
+4. **Diff patches are pre-fetched** at `.claude-review-context/file_patches.json` — output-composer uses this for inlineability checks (verifying a finding's line is inside a diff hunk). Inline comments use the `line` + `side` API fields directly from the finding's `line` — no diff-position computation is needed
 5. **Structured context envelope** at `.claude-review-context/context.yaml` — repo, PR number, head SHA, file counts, index of all pre-fetched files
 6. **Phase 1 output is the single source of truth** — Phase 2 agents MUST use the context object, not re-fetch from GitHub API
 7. **Convention text is in context** — do not re-read CLAUDE.md files in Phase 2 or later

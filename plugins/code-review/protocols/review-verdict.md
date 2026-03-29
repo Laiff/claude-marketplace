@@ -190,11 +190,16 @@ When posting inline comments with a verdict via `gh api`:
     {
       "path": "src/auth.ts",
       "line": 15,
+      "side": "RIGHT",
       "body": "**SQL injection** ..."
     }
   ]
 }
 ```
 
-The `event` field accepts: `APPROVE`, `REQUEST_CHANGES`, `COMMENT`.
+Comments use the `line` + `side` API (NOT the legacy `position` field):
+- `line` — the file line number from the finding (NEVER manually adjusted)
+- `side` — always `"RIGHT"` (comment on the new version of the file)
+- The `event` field accepts: `APPROVE`, `REQUEST_CHANGES`, `COMMENT`
+
 This is the preferred method as it posts verdict + inline comments atomically.

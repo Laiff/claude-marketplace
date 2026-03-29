@@ -19,7 +19,7 @@ You receive as YAML from the orchestrator:
 - Whether `--post` flag was provided (controls whether to post to GitHub)
 
 For head SHA, repo, and PR number: read `.claude-review-context/context.yaml` (structured envelope).
-For diff positions: read `.claude-review-context/file_patches.json` (pre-fetched patches).
+For inlineability checks: read `.claude-review-context/file_patches.json` (pre-fetched patches).
 
 ### Flag vs Verdict — CRITICAL DISTINCTION
 
@@ -112,6 +112,9 @@ Rules for suggestion blocks:
 - Only if the fix is < 6 lines and self-contained
 - NEVER post a suggestion unless committing it entirely fixes the issue
 - If the fix is larger, describe it in prose
+- The suggestion block REPLACES the line at the comment's `line` number.
+  If the suggestion text does not match that exact line, REMOVE the suggestion
+  block and describe the fix in prose instead.
 
 **For batched findings** (batch_key is set):
 - Include in the review body under "Additional findings", listing all affected files
@@ -134,17 +137,19 @@ Build a single review body that includes:
 
 This review body is the ONLY summary. Do NOT post a separate summary comment.
 
-### Determine Diff Positions
+### Line Integrity Rule (MANDATORY)
 
-For inline comments, the GitHub review API requires diff-relative positions.
+Each inline comment uses the finding's `line` field (the file line number set by Phase 2)
+as the comment anchor. This rule prevents suggestions from attaching to wrong lines.
 
-**Preferred:** Read `.claude-review-context/file_patches.json` (pre-fetched) and count
-position within the patch string for the target line. Position 1 = first line of the patch.
-
-**Fallback:** If `file_patches.json` is not available, fetch via:
-```bash
-gh api repos/{owner}/{repo}/pulls/{number}/files --jq '.[].patch'
-```
+1. **NEVER relocate a comment to a different line.** The `line` field from the finding
+   is the ONLY valid anchor. Do not manually pick a "more representative" line.
+2. **If a `suggestion` block is present**, the comment `line` MUST be the exact line
+   the suggestion replaces. If the finding's `line` does not match the suggestion target,
+   REMOVE the `suggestion` block and use prose instead.
+3. **If the finding's `line` is not in the diff** (not a `+` or context line),
+   move the entire finding to the review body ("Additional Findings" section).
+   Do NOT guess a nearby inlineable line.
 
 ### Posting — Single Atomic Review
 
@@ -156,6 +161,10 @@ The `event` field is determined by `verdict.action`.
 - `REQUEST_CHANGES` -> event: `REQUEST_CHANGES`, flag: `--request-changes`
 - `COMMENT` -> event: `COMMENT`, flag: `--comment`
 
+**Inline comments use the `line` + `side` fields (NOT the legacy `position` field).**
+The `line` field is the file line number on the RIGHT side of the diff — this is exactly
+the finding's `line` field. No diff-position computation is needed.
+
 **Method 1 — gh api POST (preferred — atomic):**
 ```bash
 # Build payload.json:
@@ -164,11 +173,25 @@ The `event` field is determined by `verdict.action`.
 #   "event": "REQUEST_CHANGES",
 #   "body": "## Code Review — :shield: Security — Request Changes\n\n...",
 #   "comments": [
-#     {"path": "file.ts", "position": 7, "body": "..."}
+#     {"path": "file.ts", "line": 15, "side": "RIGHT", "body": "..."}
 #   ]
 # }
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
   --method POST --input payload.json
+```
+
+Each comment object MUST have:
+- `path` — file path relative to repo root (from finding's `file` field)
+- `line` — file line number (from finding's `line` field, NEVER modified)
+- `side` — always `"RIGHT"` (we comment on the new version of the file)
+- `body` — the formatted comment text
+
+Do NOT include the `position` field. The `line` + `side` API is the modern
+replacement and does not require diff-position arithmetic.
+
+For multi-line comments (finding has `end_line`):
+```json
+{"path": "file.ts", "line": 45, "start_line": 42, "start_side": "RIGHT", "side": "RIGHT", "body": "..."}
 ```
 
 **Method 2 — Python utility fallback:**
