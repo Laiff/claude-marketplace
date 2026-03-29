@@ -1,0 +1,91 @@
+node:
+  topic: code-review - documentation
+  goal: document modern line+side API and establish line integrity rules
+  delta_s: 0.24
+  zone: safe
+  lambda: convergent
+  insight: modern GitHub API eliminates diff-position arithmetic, line integrity prevents misplaced comments
+  type: hard
+  bridge: legacy-position-api-docs → modern-line-side-api-docs + integrity-rules
+  speculative: no
+  metrics:
+    W_c: -0.20
+    P: 0.88
+    E_res: 0.90
+    BBMC_residue: 0.04
+    infrastructure_enhancement: API modernization + integrity rules prevent line-mismatch bugs
+
+analysis:
+  delta_s:
+    value: 0.24
+    zone: safe
+    impact: |
+      54 lines changed (41 insertions, 13 deletions) across 3 files.
+      Safe zone - documentation update with new rules:
+      - Legacy position API → modern line+side API documented
+      - Line Integrity Rule added (3 mandatory rules)
+      - No code changes, clarifies posting mechanism
+      - Prevents comment/suggestion line-mismatch bugs
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Converging toward modern GitHub API standard.
+      Reducing complexity: diff-position arithmetic → direct line numbers.
+      Establishing integrity rules to prevent misplaced comments.
+      Standard API evolution pattern (legacy → modern).
+
+  bbpf:
+    bridge: api-documentation → modernized-api-documentation
+    paths:
+      - path_1: "Document line+side API (no position field)"
+      - path_2: "Add Line Integrity Rule (3 mandatory rules)"
+      - path_3: "Clarify file_patches.json purpose"
+
+  bbmc:
+    residue: 0.04
+    assessment: |
+      Minimal residue. Clean API modernization documentation.
+      Replaces one section with another (diff positions → line integrity).
+      Consistent terminology across all 3 files.
+      Integrity rules formalized to prevent known bug class.
+
+  semantic_bridge:
+    from: |
+      GitHub Review API usage:
+        - Documentation referenced legacy "position" field
+        - Required computing diff-relative position from file line number
+        - "Determine Diff Positions" section with arithmetic instructions
+        - file_patches.json described as "for diff positions"
+        - No explicit rules preventing comment relocation
+    to: |
+      GitHub Review API usage:
+        - Documentation uses modern "line" + "side" fields
+        - Direct file line numbers (finding.line field as-is)
+        - "Line Integrity Rule (MANDATORY)" with 3 rules:
+          1. NEVER relocate comment to different line
+          2. Validate suggestion blocks match comment line
+          3. Move non-inlineable findings to review body
+        - file_patches.json for inlineability checks only
+        - Explicit prevention of line-mismatch bugs
+
+delta_s_calculation:
+  api_documentation_change: 0.15
+  integrity_rules_addition: 0.10
+  section_replacement: 0.05
+  no_code_changes: -0.06
+  total: 0.24
+  reasoning: |
+    Safe zone for documentation modernization:
+    - API docs updated: +0.15 (legacy → modern API)
+    - Integrity rules added: +0.10 (prevents bug class)
+    - Section replaced: +0.05 (diff positions → line integrity)
+    - No behavior changes: -0.06 (pure documentation)
+
+memory:
+  action: record
+  reason: |
+    Hard node: documents GitHub API modernization.
+    Establishes Line Integrity Rule to prevent misplaced comments.
+    Pattern: legacy position field → modern line+side fields.
+    Direct file line numbers eliminate diff-position arithmetic.
