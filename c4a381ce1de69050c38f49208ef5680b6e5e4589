@@ -1,0 +1,105 @@
+node:
+  topic: code-review - feature
+  goal: add Guard G11 to prevent self-contradictory reviews in fix-verification
+  delta_s: 0.42
+  zone: transit
+  lambda: convergent
+  insight: comprehensive guard prevents bot from contradicting own prior recommendations
+  type: hard
+  bridge: no-prior-review-consistency → G11-comprehensive-consistency-enforcement
+  speculative: no
+  metrics:
+    W_c: -0.18
+    P: 0.82
+    E_res: 0.85
+    BBMC_residue: 0.08
+    infrastructure_enhancement: closes self-contradiction failure mode
+
+analysis:
+  delta_s:
+    value: 0.42
+    zone: transit
+    impact: |
+      195 lines changed (182 insertions, 13 deletions) across 11 files.
+      Transit zone - significant cross-pipeline change:
+      - New Guard G11 affects all phases (1-5)
+      - Phase 2 agents get fix-verification mode
+      - Context preparation enhanced (comment-scanner, pr-summarizer)
+      - Validation enforcement added (evidence-verifier)
+      - Verdict calibration guard (VC6)
+      - No breaking changes, additive behavior only
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Converging toward self-consistent review behavior.
+      Reducing failure mode: self-contradiction → consistency.
+      Establishing guard pattern: G1-G10 → G11 added.
+      Closing known production failure (contradictory fix review).
+
+  bbpf:
+    bridge: review-pipeline → g11-aware-pipeline
+    paths:
+      - path_1: "Define G11 specification in quality-guards"
+      - path_2: "Implement fix-verification mode in Phase 2"
+      - path_3: "Enhance context preparation (Phase 1)"
+      - path_4: "Enforce consistency in verification (Phase 3)"
+      - path_5: "Add VC6 verdict calibration"
+
+  bbmc:
+    residue: 0.08
+    assessment: |
+      Minimal residue. Comprehensive but clean implementation.
+      Guard G11 integrated across all pipeline phases.
+      Documentation updated with examples and rationale.
+      No duplication - each component has clear G11 role.
+
+  semantic_bridge:
+    from: |
+      Fix-verification behavior:
+        - Preflight detects prior review on older commit → PROCEED
+        - Phase 2 agents review all code without prior context
+        - No awareness of prior recommendations
+        - Risk: agents may contradict prior review's explicit advice
+        - Production failure: recommended X, then flagged X as bug
+        - Result: REQUEST_CHANGES on correctly implemented fix
+    to: |
+      Fix-verification behavior:
+        - Preflight detects prior review → PROCEED (already implemented)
+        - comment-scanner preserves full prior review body (2000 chars)
+        - pr-summarizer detects is_fix_verification, extracts prior_findings
+        - Phase 2 agents receive fix-verification mode flag:
+          1. Verify the fix correctness
+          2. Flag NEW issues only (in changed code)
+          3. Do NOT contradict prior recommendations (G11)
+        - evidence-verifier enforces G11 (Step 3):
+          - Drop findings that contradict prior review
+          - Validate against prior_review_summary
+        - Verdict VC6: prevent REQUEST_CHANGES for correct fix implementation
+        - Result: self-consistent reviews, fix-verification validates correctly
+
+delta_s_calculation:
+  guard_specification: 0.12
+  phase2_implementation: 0.15
+  context_preparation: 0.10
+  verification_enforcement: 0.08
+  cross_pipeline_integration: -0.03
+  total: 0.42
+  reasoning: |
+    Transit zone (just over safe boundary):
+    - New guard affecting all phases: +0.12
+    - Phase 2 behavioral changes: +0.15 (3 agents modified)
+    - Context prep enhancement: +0.10 (full body preservation)
+    - Verification enforcement: +0.08 (new Step 3)
+    - Well-integrated change: -0.03 (follows existing patterns)
+
+    195 lines across 11 files, but additive only (no breaking changes).
+
+memory:
+  action: record
+  reason: |
+    Hard node: adds critical guard closing production failure mode.
+    Pattern: comprehensive pipeline integration for new guard.
+    G11 prevents self-contradictory reviews in fix-verification.
+    Production provenance: brace-expansion contradiction incident.
+    Scope narrowing: verify fix + new issues only.
