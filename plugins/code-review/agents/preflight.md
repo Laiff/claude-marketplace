@@ -38,11 +38,12 @@ Evaluate in order. Stop on the first failure:
 
 ## How to check
 
-**Preferred — use pre-fetched data:**
+**ALWAYS try pre-fetched data FIRST (avoids redundant API calls):**
 - Read `.claude-review-context/pr_meta.yaml` for PR state (title, body, files, SHAs)
 - Read `.claude-review-context/prior_reviews.yaml` for existing bot reviews and threads
+- Read `.claude-review-context/context.yaml` for head SHA and PR metadata
 
-**Fallback — if pre-fetched data unavailable:**
+**Only fall back to API if pre-fetched files do not exist or are empty:**
 ```bash
 # PR state
 gh pr view {number} --repo {owner/repo} --json state,isDraft,headRefOid
@@ -51,6 +52,8 @@ gh pr view {number} --repo {owner/repo} --json state,isDraft,headRefOid
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
   --jq '[.[] | select(.user.login == "github-actions[bot]")] | map({id, state, commit_id, body})'
 ```
+
+**Do NOT call both.** If pre-fetched data is available and complete, skip the API calls entirely.
 
 ### Prior review detection rules
 

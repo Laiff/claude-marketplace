@@ -166,6 +166,7 @@ to post the correct GitHub review event. See `protocols/review-verdict.md` for f
 - VC3: Respect project-level `review_policy` in CLAUDE.md / REVIEW.md
 - VC4: Downgrade internal services (except CRIT)
 - VC5: Never REQUEST_CHANGES on draft PRs
+- VC6: Fix-verification consistency — don't REQUEST_CHANGES for implementing prior review's recommendation
 
 ### Trust Calibration
 
@@ -203,3 +204,4 @@ for continuous improvement of review quality.
 | G8: Comment budget | Developer fatigue (21+ triggers bulk dismiss) | Research: Copilot 60M benchmark |
 | G9: False positive filter | General low-signal noise | Production: minimization analysis |
 | G10: Verdict calibration | Over-aggressive REQUEST_CHANGES | Production: trust erosion, topology mismatch |
+| G11: Prior review consistency | Contradicting own prior review recommendations | Production: fix-verification self-contradiction |

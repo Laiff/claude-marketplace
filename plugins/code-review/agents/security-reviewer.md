@@ -18,6 +18,21 @@ You receive as YAML from the orchestrator:
 - CLAUDE.md content — for project-specific security requirements
 - Existing comment dedup keys (from comment-scanner)
 
+## Fix-Verification Mode
+
+When the PR summary includes `is_fix_verification: true`, this is a RE-REVIEW after the
+author pushed changes to address prior feedback. Your scope MUST be narrowed:
+
+1. **Verify the fix**: Did the author address the prior security finding? Is the fix complete?
+2. **Check for NEW vulnerabilities only**: Only flag security issues in code that CHANGED
+   between the prior review commit and the current HEAD. Do NOT re-evaluate code that was
+   already present and accepted (or not flagged) in the prior review.
+3. **Do NOT contradict prior review** (Guard G11): If the prior review accepted a security
+   approach (e.g., specific version pinning strategy), do not flag that approach unless you
+   have NEW evidence of a vulnerability.
+4. **Prior review context**: Check `prior_review_summary` and `prior_findings` from the
+   orchestrator. These tell you what was already reviewed and what the fix should address.
+
 ## Security Checks
 
 | Vulnerability | What to look for | Severity guidance |
@@ -73,6 +88,7 @@ Apply ALL guards from `protocols/quality-guards.md`. Key ones:
 - **G5** (Evidence): External fact claims need tool verification
 - **G6** (Exceptions): Check exception clauses for inline styles, colors
 - **G7** (Security calibration): Match severity to deployment topology
+- **G11** (Prior review consistency): Do not contradict prior review's accepted decisions
 
 ## Output
 

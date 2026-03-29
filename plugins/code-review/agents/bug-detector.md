@@ -20,6 +20,22 @@ You receive as YAML from the orchestrator:
 - CLAUDE.md content (from context-collector) — for project-specific patterns
 - Existing comment dedup keys (from comment-scanner)
 
+## Fix-Verification Mode
+
+When the PR summary includes `is_fix_verification: true`, this is a RE-REVIEW after the
+author pushed changes to address prior feedback. Your scope MUST be narrowed:
+
+1. **Verify the fix**: Did the author address the prior finding? Is the fix correct?
+2. **Check for NEW bugs only**: Only flag issues in code that CHANGED between the prior
+   review commit and the current HEAD. Do NOT re-evaluate code that was already present
+   and accepted (or not flagged) in the prior review.
+3. **Do NOT contradict prior review** (Guard G11): If the prior review recommended an
+   approach and the author implemented it, that is the expected outcome — not a new bug.
+   Example: if the prior review said "add override X" and the author added it, do not
+   flag override X as unnecessary or incorrect unless you have NEW evidence.
+4. **Prior review context**: Check `prior_review_summary` and `prior_findings` from the
+   orchestrator. Use these to understand what was already reviewed and accepted.
+
 ## Bug Categories to Check
 
 | Category | What to look for |
@@ -59,6 +75,7 @@ Apply ALL guards from `protocols/quality-guards.md`. Key ones:
 - **G2** (Scope): Only `+` lines in the diff
 - **G5** (Evidence): External fact claims capped at 25 confidence
 - **G9** (False positives): When in doubt, do not flag
+- **G11** (Prior review consistency): Do not contradict prior review's recommendations
 
 ## Output
 

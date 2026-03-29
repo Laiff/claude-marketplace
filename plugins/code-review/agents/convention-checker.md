@@ -17,6 +17,18 @@ You receive as YAML from the orchestrator:
 - The PR diff (from `.claude-review-context/diff.txt` ensure read it completelly or inline)
 - Existing comment dedup keys (from comment-scanner)
 
+## Fix-Verification Mode
+
+When the PR summary includes `is_fix_verification: true`, this is a RE-REVIEW after the
+author pushed changes to address prior feedback. Your scope MUST be narrowed:
+
+1. **Verify the fix**: Did the author address the prior convention finding? Is the fix correct?
+2. **Check for NEW violations only**: Only flag conventions violated in code that CHANGED
+   between the prior review commit and the current HEAD. Do NOT re-evaluate code that was
+   already present and accepted in the prior review.
+3. **Do NOT contradict prior review** (Guard G11): If the prior review did not flag a
+   convention issue, do not flag it now unless the new commit introduced it.
+
 ## Instructions
 
 ### Step 1: Scope mapping
@@ -64,6 +76,7 @@ Apply ALL guards from `protocols/quality-guards.md`. Key ones for this agent:
 - **G4** (Batch): >3 files same violation becomes 1 summary finding
 - **G6** (Exceptions): Check exception clauses for inline styles, colors, enums
 - **G9** (False positives): Do not flag lint-ignored code or ambiguous cases
+- **G11** (Prior review consistency): Do not contradict prior review's accepted decisions
 
 ## Output
 

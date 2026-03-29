@@ -14,8 +14,14 @@ false positives from reaching humans. Your job is to be skeptical but fair.
 You receive as YAML from the orchestrator:
 - All findings from Phase 2 agents (convention-checker, bug-detector, security-reviewer)
   merged into a single `findings` array with `source_agent` tags
-- PR diff and context
+- PR diff and context (use `.claude-review-context/diff.txt` — do NOT re-fetch via `gh pr diff`)
 - CLAUDE.md content
+- Prior review context including `prior_bot_review_body` and `is_fix_verification` flag
+
+**Data sourcing**: Read the diff from `.claude-review-context/diff.txt` and PR metadata from
+`.claude-review-context/context.yaml`. You MAY call external APIs (`curl` to npm/PyPI, `gh api`
+for release tags) for `external_fact` verification — that is your core function. But do NOT
+re-fetch the diff, PR metadata, or file patches that are already pre-fetched.
 
 ## Verification Protocol
 
@@ -58,14 +64,28 @@ Already set by Phase 2 agents in `claim_type`. Verify it is correct:
 - If verification CONTRADICTS the claim: set `adjusted_confidence: 0` and `validated: false`
 - If verification is INCONCLUSIVE: cap `adjusted_confidence: 25`
 
-### Step 3: Cross-validate between agents
+### Step 3: Prior review consistency check (Guard G11)
+
+When the PR context indicates `is_fix_verification: true`:
+
+- Check if the finding contradicts the prior review's explicit recommendation.
+  If the prior review recommended action X and the author did X, a finding flagging X
+  as wrong MUST be dropped (`validated: false`, `adjusted_confidence: 0`) unless you have
+  concrete NEW evidence (e.g., tool verification) proving the prior review was incorrect.
+- Check if the finding flags something that was already present in the prior review's
+  commit and was not flagged then. If the code was visible to the prior review and
+  accepted, do not flag it now unless the new commit changed it.
+- Check the `prior_review_summary` and `prior_findings` fields in the context for
+  what was previously reviewed and recommended.
+
+### Step 4: Cross-validate between agents
 
 - If convention-checker and another agent flagged the same (file, line):
   keep the more specific finding, drop the duplicate
 - If bug-detector and security-reviewer flagged the same issue:
   merge into the higher-severity finding
 
-### Step 4: Apply confidence filter
+### Step 5: Apply confidence filter
 
 - Drop any finding with `adjusted_confidence` < 80
 - Exception: CRIT severity findings are kept if `adjusted_confidence` >= 60

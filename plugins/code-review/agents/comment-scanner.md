@@ -66,11 +66,37 @@ existing_comments:
     accepted: 3
     rejected: 1
     pending: 0
+  prior_bot_review_body: |
+    ## Full text of the most recent bot review body
+    This is essential for fix-verification scenarios (Guard G11).
+    Phase 2 agents need the complete prior review to understand
+    what was accepted, recommended, and flagged.
+  prior_bot_review_commit: "abc123..."
 ```
+
+### Prior review body preservation (Guard G11)
+
+**CRITICAL for fix-verification scenarios**: When a prior bot review exists
+(from `github-actions[bot]`), you MUST preserve the **complete review body text**
+in `prior_bot_review_body`. Do NOT truncate to a snippet.
+
+Phase 2 agents need the full text to:
+- Understand what the prior review explicitly accepted or did not flag
+- Know what specific fix was recommended
+- Avoid contradicting the prior review's recommendations
+
+If the body exceeds 2000 characters, preserve the first 2000 characters — this is
+still far more useful than an 80-char snippet.
+
+Also preserve `prior_bot_review_commit` — the commit SHA the prior review was
+submitted against. This lets Phase 2 agents distinguish code that was already
+reviewed from new code in the fix commit.
 
 ## Communication rules
 
 - `dedup_keys` are normalized as `path:line:description_first_30_chars_lowercase`
 - Phase 4 (dedup) compares new findings against these keys
 - If `has_prior_review` is true, only post findings for NEW or CHANGED issues
+- `prior_bot_review_body` must contain the FULL body (up to 2000 chars) of the
+  most recent bot review — not just a snippet. This is mandatory for G11 compliance.
 - Use YAML format for all structured output

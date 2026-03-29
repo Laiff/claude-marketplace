@@ -77,6 +77,16 @@ These guards prevent over-aggressive or under-aggressive verdicts:
 - Never REQUEST_CHANGES on draft PRs (they shouldn't reach here due to preflight,
   but if they do, cap at COMMENT)
 
+**VC6: Fix-verification consistency**
+- When `is_fix_verification: true`, findings that contradict the prior review's explicit
+  recommendations should have been dropped by Guard G11 before reaching the verdict stage.
+- If such findings somehow survive to Phase 4, the dedup-orchestrator MUST drop them and
+  log the G11 violation.
+- The verdict for a fix-verification PR that correctly implements the prior review's
+  recommendation SHOULD be APPROVE (if no new issues exist) or COMMENT (if minor
+  observations exist). REQUEST_CHANGES is only appropriate if the fix itself introduces
+  a genuinely new critical issue not present in the prior commit.
+
 ---
 
 ## Review Classification

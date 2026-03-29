@@ -1,8 +1,8 @@
-# Quality Guards v3
+# Quality Guards v4
 
 These guards are MANDATORY for all agents and subagents. Each guard exists because
 a specific failure pattern was observed in production reviews (35 runs, 700+ comments,
-179 reactions, 84 minimized reviews). Guards are numbered G1-G9 for cross-reference.
+179 reactions, 84 minimized reviews). Guards are numbered G1-G11 for cross-reference.
 
 ---
 
@@ -130,3 +130,30 @@ The review verdict (APPROVE, REQUEST_CHANGES, COMMENT) must be calibrated:
 - **Draft PRs cap at COMMENT** — never REQUEST_CHANGES on drafts (preflight should skip, but guard anyway)
 
 See `protocols/review-verdict.md` for the full decision matrix and calibration guards (VC1-VC5).
+
+## G11: Prior Review Consistency
+
+**Observed failure**: Second review contradicted the first review's explicit recommendation. First review
+recommended adding `brace-expansion@^3` override as forward-looking CVE protection; second review flagged
+that exact addition as a "no-op bug". First review accepted `^4 -> ^5.0.5` implicitly; second review
+flagged it as CRIT. Result: REQUEST_CHANGES on a fix that implemented exactly what was asked.
+
+When `is_fix_verification: true` (prior bot review exists on an older commit):
+
+- **Do NOT flag issues that the prior review explicitly accepted or did not flag.** If the prior review
+  listed specific items as covered/acceptable, those items are out of scope for the re-review unless
+  the code itself changed in the new commit.
+- **Do NOT contradict the prior review's explicit recommendations.** If the prior review recommended
+  adding X, and the author added X, that is the expected fix — not a new finding.
+- **Focus the re-review on:**
+  1. Did the fix address the prior finding?
+  2. Did the fix introduce genuinely NEW issues (not present in the prior commit)?
+  3. Is the fix correct and complete?
+- **Prophylactic overrides are valid.** When a prior review recommends forward-looking protection
+  (e.g., version overrides for ranges with no current consumers), the override being a "no-op" today
+  is by design — it guards against future transitive dependencies. Do not flag these as bugs.
+- **Cross-major version overrides are valid when no patched release exists within the major.**
+  Package managers (pnpm, npm) support overrides that cross major versions precisely for cases
+  where a vulnerability exists but no patch is available within that major line. If no consumers
+  of the original major version exist in the dependency tree (no lockfile snapshot), this is a
+  low-risk prophylactic measure, not a CRIT bug.
