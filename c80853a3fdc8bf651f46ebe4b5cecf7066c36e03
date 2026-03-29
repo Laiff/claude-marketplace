@@ -1,0 +1,94 @@
+node:
+  topic: code-review - feature
+  goal: add fix-verification logic to detect and re-review after author addresses feedback
+  delta_s: 0.38
+  zone: safe
+  lambda: convergent
+  insight: intelligent re-review closes feedback loop, gate now understands fix-verification scenarios
+  type: hard
+  bridge: simple-gate-logic → fix-verification-aware-gate
+  speculative: no
+  metrics:
+    W_c: -0.12
+    P: 0.85
+    E_res: 0.88
+    BBMC_residue: 0.06
+    infrastructure_enhancement: closes feedback verification loop
+
+analysis:
+  delta_s:
+    value: 0.38
+    zone: safe
+    impact: |
+      35 lines changed (25 insertions, 5 deletions) in single file.
+      Safe zone but significant behavioral change:
+      - New check 3 adds fix-verification detection
+      - Gate logic reordered (check numbering changed)
+      - Security exceptions added to trivial automation
+      - Documentation clarifies complex prior review rules
+
+  lambda:
+    pattern: convergent
+    reasoning: |
+      Converging toward intelligent feedback loop.
+      Reducing blind spot: no re-review → fix verification.
+      Establishing standard pattern: detect author fixes, verify.
+      Closing feedback loop for quality improvement.
+
+  bbpf:
+    bridge: gate-logic → enhanced-gate-logic
+    paths:
+      - path_1: "Add fix-verification detection (check 3)"
+      - path_2: "Reorder checks for logical flow"
+      - path_3: "Add security-relevant exceptions"
+
+  bbmc:
+    residue: 0.06
+    assessment: |
+      Minimal residue. Clean feature addition.
+      Check reordering improves logical flow.
+      Security exceptions prevent false skips.
+      Documentation clarifies complex decision tree.
+
+  semantic_bridge:
+    from: |
+      Preflight gate logic:
+        - Check 1: PR closed → skip
+        - Check 2: PR draft → skip
+        - Check 3: Trivial automation → skip
+        - Check 4: Bot already reviewed this commit → skip
+        - Problem: if prior review on commit A, author pushes commit B,
+          gate might skip (depending on commit_id matching)
+        - Blind spot: no verification that author addressed feedback
+    to: |
+      Preflight gate logic:
+        - Check 1: PR closed → skip
+        - Check 2: PR draft → skip
+        - Check 3: Prior review on OLDER commit → PROCEED (fix-verification)
+          - Detects: bot review with COMMENTED/CHANGES_REQUESTED on older commit
+          - Behavior: author pushed changes after feedback → re-review to verify
+        - Check 4: Bot already reviewed CURRENT commit → skip
+        - Check 5: Trivial automation → skip (with security exceptions)
+          - Exceptions: overrides/resolutions, CVE/vulnerability references
+        - Feedback loop closed: bot verifies fixes were applied correctly
+
+delta_s_calculation:
+  new_check_added: 0.15
+  gate_logic_reordering: 0.10
+  documentation_expansion: 0.08
+  security_exceptions: 0.05
+  total: 0.38
+  reasoning: |
+    Safe zone, near transit boundary:
+    - New check 3: +0.15 (new behavior path)
+    - Reordering: +0.10 (changes decision tree)
+    - Documentation: +0.08 (clarifies complex logic)
+    - Security rules: +0.05 (additional exceptions)
+
+memory:
+  action: record
+  reason: |
+    Hard node: adds fix-verification feedback loop.
+    Pattern for intelligent re-review after author addresses findings.
+    Closes blind spot: bot now verifies fixes were applied.
+    Check 3 detects: prior COMMENTED/CHANGES_REQUESTED on older commit.
