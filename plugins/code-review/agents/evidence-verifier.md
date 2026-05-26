@@ -96,7 +96,7 @@ Return the COMPLETE list of findings with verification fields filled in as YAML:
 
 ```yaml
 findings:
-  - id: "CONV-a1b2-42"
+  - id: "CONV-[hash:4]"
     # ... all Phase 2 fields preserved unchanged ...
     validated: true
     validation_reasoning: |
@@ -104,7 +104,7 @@ findings:
       "Add tags: ['autodocs'] to every story meta" and the story
       at line 10 is missing this tag.
     adjusted_confidence: 95
-  - id: "BUG-c3d4-88"
+  - id: "BUG-[hash:4]"
     validated: false
     validation_reasoning: |
       Code at line 88 includes a null check on line 85 that

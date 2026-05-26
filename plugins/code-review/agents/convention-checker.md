@@ -84,7 +84,7 @@ Return a YAML list of Finding objects:
 
 ```yaml
 findings:
-  - id: "CONV-a1b2-42"
+  - id: "CONV-[hash:4]"
     file: "turbo/packages/ds/src/stories/DecisionDetail.stories.tsx"
     line: 10
     end_line: 12

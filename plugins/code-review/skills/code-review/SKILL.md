@@ -71,8 +71,9 @@ Phase 5 ── output-composer (sonnet)
 
 ## Execution
 
-All agents follow the protocols in `protocols/quality-guards.md` and communicate
-using the YAML schema in `protocols/finding-schema.md`.
+All agents should follow the protocols defined in `protocols/agent-communication.md`, 
+apply filters from `protocols/quality-guards.md` and should communicate
+using the YAML schema defined in `protocols/finding-schema.md`.
 
 ### Phase-by-phase agent dispatch
 
@@ -120,7 +121,7 @@ phases, wrap them in a YAML code block:
 
 ```yaml
 findings:
-  - id: "BUG-a1b2-42"
+  - id: "BUG-[hash:4]"
     file: "src/utils.ts"
     line: 42
     category: BUG
@@ -134,7 +135,7 @@ findings:
 ```
 
 See `protocols/agent-communication.md` for complete phase transition contracts
-and `protocols/finding-schema.md` for the full Finding object definition.
+and `protocols/finding-schema.md` for the full Finding object definition 
 
 ### Review Verdict and Classification
 
@@ -186,9 +187,6 @@ After each review, the output-composer captures these signals for future improve
 - Comment budget trimming count (how many findings dropped for budget)
 - Finding category distribution (BUG, CONV, SEC, ARCH)
 - Which guards triggered and how often
-
-This data feeds into the feedback-to-rule pipeline (see `agents/feedback-learner.md`)
-for continuous improvement of review quality.
 
 ## Quality Guards Summary
 

@@ -1,4 +1,4 @@
-# Inter-Agent Communication Protocol v2
+# Inter-Agent Communication Protocol
 
 This protocol governs how agents in the review pipeline pass data between phases.
 All inter-agent data exchange uses YAML format — never JSON.
@@ -86,13 +86,13 @@ The evidence-verifier receives a MERGED array of all findings:
 
 ```yaml
 findings:
-  - id: "CONV-a1b2-42"
+  - id: "CONV-[hash:4]"
     file: "src/Component.tsx"
     line: 42
     category: CONV
     source_agent: convention-checker
     # ... all Finding fields
-  - id: "BUG-c3d4-88"
+  - id: "BUG-[hash:4]"
     file: "src/utils.ts"
     line: 88
     category: BUG
@@ -118,7 +118,7 @@ The dedup-orchestrator receives only VALIDATED findings:
 ```yaml
 findings:
   # only findings where validated == true
-  - id: "CONV-a1b2-42"
+  - id: "CONV-[hash:4]"
     validated: true
     adjusted_confidence: 92
     # ... all fields preserved
@@ -138,7 +138,7 @@ pr_summary:
 ```yaml
 findings:
   # deduplicated, batched, budget-constrained
-  - id: "CONV-a1b2-42"
+  - id: "CONV-[hash:4]"
     batch_key: null
     batch_files: []
     batched: false

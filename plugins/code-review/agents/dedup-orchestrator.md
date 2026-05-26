@@ -128,7 +128,7 @@ Return the final findings, verdict, and stats as YAML:
 
 ```yaml
 findings:
-  - id: "CONV-a1b2-42"
+  - id: "CONV-[hash:4]"
     # ... all upstream fields preserved ...
     batch_key: null
     batch_files: []

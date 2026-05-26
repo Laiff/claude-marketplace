@@ -96,7 +96,7 @@ Return a YAML list of Finding objects:
 
 ```yaml
 findings:
-  - id: "SEC-e5f6-15"
+  - id: "SEC-[hash:4]"
     file: "apps/api/src/routes/auth.ts"
     line: 15
     end_line: 20

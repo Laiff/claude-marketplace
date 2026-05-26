@@ -84,7 +84,7 @@ findings are better than many low-quality ones.
 
 ```yaml
 findings:
-  - id: "BUG-c3d4-88"
+  - id: "BUG-[hash:4]"
     file: "src/utils/parser.ts"
     line: 88
     end_line: 90

@@ -1,4 +1,4 @@
-# Finding Schema v3
+# Finding Schema
 
 All agents in the review pipeline communicate using this structured YAML format.
 Every finding passed between phases MUST include ALL fields.
@@ -8,7 +8,7 @@ and only add or modify their designated fields.
 ## Finding Object
 
 ```yaml
-id: "CONV-a1b2-42"              # <CATEGORY>-<4 chars of sha1(file)>-<line>
+id: "CONV-[hash:4]"              # <CATEGORY>-<4 chars of sha1(file:line)> `${file}:${line}`
 file: "path/to/file.tsx"
 line: 42
 end_line: 45
@@ -81,7 +81,7 @@ verdict:
 
 1. **Never drop fields** — downstream agents rely on all fields being present
 2. **Never mutate upstream fields** — verifiers ADD, never overwrite
-3. **id format** — `<CAT>-<4 chars of sha1(file)>-<line>` ensures uniqueness across agents
+3. **id format** — `<CAT>-<4 chars of sha2(file:line)>` `${file}:${line}` ensures uniqueness across agents
 4. **confidence scale** — 0-100 integer. External facts cap at 25 without tool proof
 5. **suggestion_type** — `code` means the suggestion is a committable code block, `description` means prose instructions, `none` means no suggestion provided
 6. **batch_key** — set by dedup phase when finding is consolidated into a batch. Format: `<category>-<normalized_description_hash_8>`
