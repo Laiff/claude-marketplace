@@ -71,6 +71,8 @@ Phase 5 ── output-composer (sonnet)
 
 ## Execution
 
+Prefer to use Workflow fully schematized according to the process
+
 All agents should follow the protocols defined in `protocols/agent-communication.md`, 
 apply filters from `protocols/quality-guards.md` and should communicate
 using the YAML schema defined in `protocols/finding-schema.md`.

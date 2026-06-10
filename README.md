@@ -16,7 +16,7 @@ Then install individual plugins:
 
 ## Plugins
 
-### code-review v4.0.0
+### code-review v4.7.0
 
 Evidence-driven code review with multi-agent orchestration, feedback-grounded quality guards, and YAML-structured inter-agent communication.
 

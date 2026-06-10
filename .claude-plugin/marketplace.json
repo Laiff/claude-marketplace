@@ -7,7 +7,7 @@
     "url": "https://github.com/Laiff"
   },
   "metadata": {
-    "version": "1.0.1",
+    "version": "1.0.2",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -15,7 +15,7 @@
       "name": "code-review",
       "source": "./plugins/code-review",
       "description": "Evidence-driven code review with multi-agent orchestration, feedback-grounded quality guards, and YAML-structured inter-agent communication",
-      "version": "4.6.0",
+      "version": "4.7.0",
       "category": "development",
       "author": {
         "name": "Laiff",
