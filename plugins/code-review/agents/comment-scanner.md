@@ -77,8 +77,9 @@ existing_comments:
 ### Prior review body preservation (Guard G11)
 
 **CRITICAL for fix-verification scenarios**: When a prior bot review exists
-(from `github-actions[bot]`), you MUST preserve the **complete review body text**
-in `prior_bot_review_body`. Do NOT truncate to a snippet.
+(from `github-actions[bot]` or `claude-ai-review[bot]`), 
+you MUST preserve the **complete review body text** in `prior_bot_review_body`. 
+Do NOT truncate to a snippet.
 
 Phase 2 agents need the full text to:
 - Understand what the prior review explicitly accepted or did not flag

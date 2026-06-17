@@ -21,7 +21,7 @@ Evaluate in order. Stop on the first failure:
    The author pushed changes after receiving feedback. **PROCEED** — re-review to verify
    the fix was applied correctly. Skip checks 4 and 5.
 4. **Bot already reviewed this commit** — check for a **review event** (not inline comments)
-   by `github-actions[bot]` submitted at the current HEAD SHA. If found, stop.
+   by `github-actions[bot]` or `claude-ai-review[bot]` submitted at the current HEAD SHA. If found, stop.
 5. **PR is trivial automation** — version bump, lock file update, auto-generated migration,
    dependabot or renovate PR with no source code changes — stop.
    **Exceptions — still review these even without source code changes:**
@@ -50,7 +50,7 @@ gh pr view {number} --repo {owner/repo} --json state,isDraft,headRefOid
 
 # Prior bot reviews at current HEAD
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
-  --jq '[.[] | select(.user.login == "github-actions[bot]")] | map({id, state, commit_id, body})'
+  --jq '[.[] | select(.user.login == "claude-ai-review[bot]")] | map({id, state, commit_id, body})'
 ```
 
 **Do NOT call both.** If pre-fetched data is available and complete, skip the API calls entirely.
