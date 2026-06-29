@@ -71,73 +71,72 @@ Phase 5 ── output-composer (sonnet)
 
 ## Execution
 
-Prefer to use Workflow fully schematized according to the process
+**Primary execution path**: invoke the Workflow tool with `scriptPath` pointing to the
+workflow script bundled in this plugin. Do NOT regenerate or inline the script — use
+the pre-built file directly.
 
-All agents should follow the protocols defined in `protocols/agent-communication.md`, 
-apply filters from `protocols/quality-guards.md` and should communicate
-using the YAML schema defined in `protocols/finding-schema.md`.
-
-### Phase-by-phase agent dispatch
-
-**Phase 0** — Launch `preflight` agent (haiku, 30s timeout)
-- If `proceed: false`, stop and report reason
-
-**Phase 1** — Launch 3 agents in PARALLEL (all haiku):
-- `context-collector` — returns CLAUDE.md content and extracted conventions
-- `pr-summarizer` — returns structured PR summary with intent, scope, risk
-- `comment-scanner` — returns existing comment dedup keys
-
-**Phase 2** — Launch 3 agents in PARALLEL:
-- `convention-checker` (sonnet) — CLAUDE.md compliance audit
-- `bug-detector` (sonnet) — logic and correctness bugs
-- `security-reviewer` (sonnet) — security vulnerabilities and architecture
-
-Each receives all Phase 1 outputs as YAML. Each returns Finding objects per the schema.
-
-**Phase 3** — Launch `evidence-verifier` agent (sonnet):
-- Receives all Phase 2 findings merged into a single array
-- Validates each finding by claim type (code_logic, claude_md, external_fact)
-- Cross-validates between agents to eliminate duplicates
-- Drops findings with adjusted_confidence < 80 (except CRIT severity at >= 60)
-
-**Phase 4** — Launch `dedup-orchestrator` agent (haiku):
-- Three-layer deduplication: exact, proximity, semantic
-- Batch guard: >3 files with same violation becomes 1 summary finding
-- Comment budget: max 10 unique comments (CRIT always kept)
-- **Review verdict**: determines APPROVE / REQUEST_CHANGES / COMMENT (see `protocols/review-verdict.md`)
-- **Review classification**: categorizes review as security / bugs / conventions / architecture / mixed / clean
-
-**Phase 5** — Launch `output-composer` agent (sonnet):
-- Terminal summary with verdict and classification (always)
-- If `--post` flag: posts ONE atomic review with correct GitHub event type from `verdict.action`
-- The `--post` flag controls WHETHER to post; `verdict.action` controls the event type (APPROVE / REQUEST_CHANGES / COMMENT) — these are independent
-- Inlineable findings become inline review comments within the single review
-- Non-inlineable findings (outside diff) go into the review body text
-- No separate summary comment — everything in one review event
-- Posting fallback chain: gh api (atomic), python utility, gh pr review
-
-### Inter-Agent Communication
-
-All data exchange between agents uses YAML format. When passing findings between
-phases, wrap them in a YAML code block:
-
-```yaml
-findings:
-  - id: "BUG-[hash:4]"
-    file: "src/utils.ts"
-    line: 42
-    category: BUG
-    severity: CRIT
-    confidence: 95
-    claim_type: code_logic
-    description: "Null dereference on optional chain"
-    evidence: "Line 42: user.profile.name — user.profile can be undefined"
-    suggestion: "user.profile?.name"
-    suggestion_type: code
+```
+Workflow({
+  scriptPath: "<plugin_dir>/workflows/code-review/code-review.js",
+  args: {
+    owner:       "ORG_OR_USER",        // GitHub org or user (required)
+    repo:        "REPO_NAME",          // GitHub repo name (required)
+    pr_number:   123,                  // PR number to review (required)
+    post_flag:   true,                 // Post review to GitHub? (optional, default: false)
+    context_dir: "/path/to/context",   // Pre-fetched context directory (optional)
+    head_sha:    "abc123def456...",     // HEAD commit SHA (optional, resolved from PR if omitted)
+    plugin_dir:  "<plugin_dir>"        // Path to this plugin's root (optional but recommended)
+  }
+})
 ```
 
-See `protocols/agent-communication.md` for complete phase transition contracts
-and `protocols/finding-schema.md` for the full Finding object definition 
+### Args Reference
+
+| Arg | Type | Required | Default | Description |
+|-----|------|----------|---------|-------------|
+| `owner` | string | **yes** | — | GitHub repository owner (org or user). Example: `"Reluna-Family"` |
+| `repo` | string | **yes** | — | GitHub repository name. Example: `"FG"` |
+| `pr_number` | number | **yes** | — | Pull request number to review. Example: `1873` |
+| `post_flag` | boolean | no | `false` | Whether to post the review to GitHub. When `false`, only a terminal summary is printed. When `true`, a single atomic review is posted via `gh api`. |
+| `context_dir` | string | no | `null` | Path to a directory containing pre-fetched PR context files (`diff.txt`, `pr_meta.yaml`, `prior_reviews.yaml`, `relevant_claude_mds.txt`, `context.yaml`, `file_patches.json`). When provided, agents read from these files instead of calling `gh` CLI — faster and avoids rate limits. Typically set by CI runners. |
+| `head_sha` | string | no | `null` | The HEAD commit SHA of the PR. Used for posting inline review comments at the correct commit. If omitted, resolved from the PR summary agent's output. |
+| `plugin_dir` | string | no | `null` | Absolute path to this plugin's installed root directory. Used to resolve agent instruction files (`agents/*.md`) and protocol files (`protocols/*.md`). When omitted, agents fall back to inline prompts without reading external instruction files — still functional but less precise. |
+
+### How to resolve args values
+
+**`owner` and `repo`**: Extract from the PR URL, or from `git remote get-url origin`, or ask the user.
+
+**`pr_number`**: From the user's request (`"review PR #123"`), or from `gh pr list`, or from `gh pr view --json number`.
+
+**`post_flag`**: Default `false` for dry-run reviews. Set to `true` when the user says `--post`, `post it`, `submit the review`, or equivalent.
+
+**`context_dir`**: Only relevant in CI environments where a pre-fetch step populates context files. In interactive use, leave as `null` — agents will call `gh` commands directly.
+
+**`head_sha`**: Run `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid` to resolve, or let the pipeline resolve it automatically.
+
+**`plugin_dir`**: The path where this plugin is installed. In Claude Code this is typically the plugin cache path shown in the skill resolution context. If not available, omit it — the pipeline still works but agents won't read their extended instruction files.
+
+### What the script does (phase summary)
+
+All orchestration, schemas, prompts, and control flow live inside the workflow script.
+The skill does NOT need to re-describe agent prompts. The script handles everything:
+
+| Phase | Agents | Model | Purpose |
+|-------|--------|-------|---------|
+| 0 Preflight | preflight | haiku | Gate check — should this PR be reviewed? |
+| 1 Context | context-collector, pr-summarizer, comment-scanner | haiku (×3 parallel) | Gather conventions, summarize PR, scan existing comments |
+| 2 Review | convention-checker, bug-detector, security-reviewer | sonnet (×3 parallel) | Convention, bug, and security review |
+| 3 Verify | evidence-verifier | sonnet | Evidence grounding and cross-validation |
+| 4 Dedup | dedup-orchestrator | haiku | Three-layer dedup, batch guard, budget cap, verdict |
+| 5 Compose | output-composer | sonnet | Terminal summary + post atomic GitHub review |
+
+Short-circuit: if Phase 2 produces 0 findings → Phases 3–4 are skipped → clean APPROVE.
+
+### Protocols (read by agents via `plugin_dir`)
+
+All agents follow the protocols defined in `protocols/agent-communication.md`,
+apply filters from `protocols/quality-guards.md`, and communicate using the
+schema defined in `protocols/finding-schema.md`.
 
 ### Review Verdict and Classification
 
