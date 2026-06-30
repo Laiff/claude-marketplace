@@ -15,7 +15,7 @@
       "name": "code-review",
       "source": "./plugins/code-review",
       "description": "Evidence-driven code review with multi-agent orchestration, feedback-grounded quality guards, and YAML-structured inter-agent communication",
-      "version": "4.9.0",
+      "version": "4.10.0",
       "category": "development",
       "author": {
         "name": "Laiff",
