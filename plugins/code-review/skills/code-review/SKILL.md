@@ -71,9 +71,9 @@ Phase 5 ── output-composer (sonnet)
 
 ## Execution
 
-**Primary execution path**: invoke the Workflow tool with `scriptPath` pointing to the
-workflow script bundled in this plugin. Do NOT regenerate or inline the script — use
-the pre-built file directly.
+**Primary execution path**: invoke the Workflow tool with launcher wrapper `script` 
+containing launch arguments to the workflow script bundled in this plugin. 
+Do NOT regenerate or inline the script — use the pre-built file directly.
 
 ```
 Workflow({
