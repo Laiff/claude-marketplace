@@ -30,15 +30,20 @@ export const meta = {
   ],
 }
 
+let _args = args
+if (typeof _args === 'string') {
+  try { _args = JSON.parse(_args) } catch (e) { /** do nothing */}
+}
+
 // ── Args validation ─────────────────────────────────────────────────────────
 
-const OWNER       = args?.owner
-const REPO        = args?.repo
-const PR_NUMBER   = args?.pr_number
-const POST_FLAG   = args?.post_flag ?? false
-const CTX         = args?.context_dir   // e.g. '/_work/.../FG/FG/.claude-review-context'
-const HEAD_SHA    = args?.head_sha
-const PLUGIN      = args?.plugin_dir    // e.g. '/root/.claude/plugins/cache/.../code-review/4.8.0'
+const OWNER       = _args?.owner
+const REPO        = _args?.repo
+const PR_NUMBER   = _args?.pr_number
+const POST_FLAG   = _args?.post_flag ?? false
+const CTX         = _args?.context_dir   // e.g. '/_work/.../FG/FG/.claude-review-context'
+const HEAD_SHA    = _args?.head_sha
+const PLUGIN      = _args?.plugin_dir    // e.g. '/root/.claude/plugins/cache/.../code-review/4.8.0'
 const FULL_REPO   = `${OWNER}/${REPO}`
 
 if (!OWNER || !REPO || !PR_NUMBER) {

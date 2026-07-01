@@ -71,26 +71,45 @@ Phase 5 ── output-composer (sonnet)
 
 ## Execution
 
-**Primary execution path**: invoke the Workflow tool with launcher wrapper `script` 
-containing launch arguments to the workflow script bundled in this plugin. 
-Do NOT regenerate or inline the script — use the pre-built file directly.
+**Primary execution path**: call the Workflow tool with an inline launcher `script`
+that delegates to the pre-built workflow via `workflow()`. This avoids args
+serialisation issues with direct `scriptPath` + `args` invocation.
 
-```
-Workflow(
-  { scriptPath: "<plugin_dir>/workflows/code-review/code-review.js" },
+`<BASE>` below means the "Base directory for this skill" shown at the top of this prompt.
+
+```javascript
+export const meta = {
+  name: 'code-review-launcher',
+  description: 'Launch code review workflow',
+  phases: [
+    { title: 'Preflight', detail: 'Gate check' },
+    { title: 'Context',   detail: 'Gather context' },
+    { title: 'Review',    detail: 'Convention, bug, security review', model: 'sonnet' },
+    { title: 'Verify',    detail: 'Evidence grounding', model: 'sonnet' },
+    { title: 'Dedup',     detail: 'Dedup, budget cap, verdict' },
+    { title: 'Compose',   detail: 'Terminal summary + GitHub review', model: 'sonnet' },
+  ],
+}
+
+const result = await workflow(
+  { scriptPath: '<BASE>/workflows/code-review/code-review.js' },
   {
-    owner:       "ORG_OR_USER",        // GitHub org or user (required)
-    repo:        "REPO_NAME",          // GitHub repo name (required)
-    pr_number:   123,                  // PR number to review (required)
-    post_flag:   true,                 // Post review to GitHub? (optional, default: false)
-    context_dir: "/path/to/context",   // Pre-fetched context directory (optional)
-    head_sha:    "abc123def456...",     // HEAD commit SHA (optional, resolved from PR if omitted)
-    plugin_dir:  "<plugin_dir>"        // Path to this plugin's root (optional but recommended)
+    owner:       'OWNER',
+    repo:        'REPO',
+    pr_number:   PR_NUMBER,
+    post_flag:   POST_FLAG,
+    context_dir: 'CONTEXT_DIR_OR_NULL',
+    head_sha:    'HEAD_SHA_OR_NULL',
+    plugin_dir:  '<BASE>',
   }
 )
+return result
 ```
 
-### Args Reference
+Replace `<BASE>`, `OWNER`, `REPO`, `PR_NUMBER`, `POST_FLAG`, and optional args
+with actual values. Set `context_dir` and `head_sha` to `null` when not available.
+
+### Args reference
 
 | Arg | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
@@ -110,11 +129,11 @@ Workflow(
 
 **`post_flag`**: Default `false` for dry-run reviews. Set to `true` when the user says `--post`, `post it`, `submit the review`, or equivalent.
 
-**`context_dir`**: Only relevant in CI environments where a pre-fetch step populates context files. In interactive use, leave as `null` — agents will call `gh` commands directly.
+**`context_dir`**: Only relevant in CI environments where a pre-fetch step populates context files. In interactive use, set to `null`.
 
-**`head_sha`**: Run `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid` to resolve, or let the pipeline resolve it automatically.
+**`head_sha`**: Omit or set to `null` — the pipeline resolves it automatically.
 
-**`plugin_dir`**: The path where this plugin is installed. In Claude Code this is typically the plugin cache path shown in the skill resolution context. If not available, omit it — the pipeline still works but agents won't read their extended instruction files.
+**`plugin_dir`**: Use `<BASE>` — the "Base directory for this skill" from the top of this prompt.
 
 ### What the script does (phase summary)
 
@@ -137,6 +156,29 @@ Short-circuit: if Phase 2 produces 0 findings → Phases 3–4 are skipped → c
 All agents follow the protocols defined in `protocols/agent-communication.md`,
 apply filters from `protocols/quality-guards.md`, and communicate using the
 schema defined in `protocols/finding-schema.md`.
+
+### Inter-Agent Communication
+
+All data exchange between agents uses YAML format. When passing findings between
+phases, wrap them in a YAML code block:
+
+```yaml
+findings:
+  - id: "BUG-[hash:4]"
+    file: "src/utils.ts"
+    line: 42
+    category: BUG
+    severity: CRIT
+    confidence: 95
+    claim_type: code_logic
+    description: "Null dereference on optional chain"
+    evidence: "Line 42: user.profile.name — user.profile can be undefined"
+    suggestion: "user.profile?.name"
+    suggestion_type: code
+```
+
+See `protocols/agent-communication.md` for complete phase transition contracts
+and `protocols/finding-schema.md` for the full Finding object definition 
 
 ### Review Verdict and Classification
 
