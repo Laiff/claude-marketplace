@@ -76,9 +76,9 @@ containing launch arguments to the workflow script bundled in this plugin.
 Do NOT regenerate or inline the script — use the pre-built file directly.
 
 ```
-Workflow({
-  scriptPath: "<plugin_dir>/workflows/code-review/code-review.js",
-  args: {
+Workflow(
+  { scriptPath: "<plugin_dir>/workflows/code-review/code-review.js" },
+  {
     owner:       "ORG_OR_USER",        // GitHub org or user (required)
     repo:        "REPO_NAME",          // GitHub repo name (required)
     pr_number:   123,                  // PR number to review (required)
@@ -87,7 +87,7 @@ Workflow({
     head_sha:    "abc123def456...",     // HEAD commit SHA (optional, resolved from PR if omitted)
     plugin_dir:  "<plugin_dir>"        // Path to this plugin's root (optional but recommended)
   }
-})
+)
 ```
 
 ### Args Reference
