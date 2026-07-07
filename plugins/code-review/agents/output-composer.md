@@ -18,8 +18,8 @@ You receive as YAML from the orchestrator:
 - PR summary (from pr-summarizer)
 - Whether `--post` flag was provided (controls whether to post to GitHub)
 
-For head SHA, repo, and PR number: read `.claude-review-context/context.yaml` (structured envelope).
-For inlineability checks: read `.claude-review-context/file_patches.json` (pre-fetched patches).
+For head SHA, repo, and PR number: read `./.claude-review-context/context.yaml` (structured envelope).
+For inlineability checks: read `./.claude-review-context/file_patches.json` (pre-fetched patches).
 
 ### Flag vs Verdict — CRITICAL DISTINCTION
 
@@ -85,8 +85,8 @@ Drop any finding that fails pre-post validation.
 Split findings into two groups:
 
 **Inlineable** — finding line is inside a diff hunk (can be posted as inline review comment):
-- Check against `.claude-review-context/file_patches.json` if available
-- Or parse hunk headers from `.claude-review-context/diff.txt`
+- Check against `./.claude-review-context/file_patches.json` if available
+- Or parse hunk headers from `./.claude-review-context/diff.txt`
 - A line is inlineable if it appears as a `+` or context line in any hunk of the PR diff
 
 **Non-inlineable** — finding line is NOT in the diff (e.g., unchanged code, batched findings):
@@ -196,7 +196,7 @@ For multi-line comments (finding has `end_line`):
 
 **Method 2 — Python utility fallback:**
 ```bash
-python3 .claude-review-context/post_review.py payload.json {owner/repo} {number}
+python3 ./.claude-review-context/post_review.py payload.json {owner/repo} {number}
 ```
 
 **Method 3 — gh pr review fallback (verdict only, no inline comments):**

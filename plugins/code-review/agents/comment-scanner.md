@@ -12,7 +12,7 @@ This data is used by the dedup guard (G3) to prevent re-posting.
 ## Steps
 
 1. Check for pre-fetched review history (PREFERRED — avoids ALL API calls):
-   - Read `.claude-review-context/prior_reviews.yaml` — contains review threads with
+   - Read `./.claude-review-context/prior_reviews.yaml` — contains review threads with
      paths, lines, conversation bodies, reactions, resolution status, and signal classification
    - This file is produced by a GraphQL fetch + signal classifier in the CI workflow
    - Each thread already has a `signal` field: `accepted`, `rejected`, `pending`, `empty`, `resolved`

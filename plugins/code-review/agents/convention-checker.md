@@ -14,7 +14,7 @@ You are the primary convention enforcement mechanism.
 You receive as YAML from the orchestrator:
 - PR summary (from pr-summarizer) — use `intent` to understand what the code is trying to do
 - Full CLAUDE.md and REVIEW.md content with extracted conventions (from context-collector)
-- The PR diff (from `.claude-review-context/diff.txt` ensure read it completelly or inline)
+- The PR diff (from `./.claude-review-context/diff.txt` ensure read it completelly or inline)
 - Existing comment dedup keys (from comment-scanner)
 
 ## Fix-Verification Mode

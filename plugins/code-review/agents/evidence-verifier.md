@@ -14,12 +14,12 @@ false positives from reaching humans. Your job is to be skeptical but fair.
 You receive as YAML from the orchestrator:
 - All findings from Phase 2 agents (convention-checker, bug-detector, security-reviewer)
   merged into a single `findings` array with `source_agent` tags
-- PR diff and context (use `.claude-review-context/diff.txt` — do NOT re-fetch via `gh pr diff`)
+- PR diff and context (use `./.claude-review-context/diff.txt` — do NOT re-fetch via `gh pr diff`)
 - CLAUDE.md content
 - Prior review context including `prior_bot_review_body` and `is_fix_verification` flag
 
-**Data sourcing**: Read the diff from `.claude-review-context/diff.txt` and PR metadata from
-`.claude-review-context/context.yaml`. You MAY call external APIs (`curl` to npm/PyPI, `gh api`
+**Data sourcing**: Read the diff from `./.claude-review-context/diff.txt` and PR metadata from
+`./.claude-review-context/context.yaml`. You MAY call external APIs (`curl` to npm/PyPI, `gh api`
 for release tags) for `external_fact` verification — that is your core function. But do NOT
 re-fetch the diff, PR metadata, or file patches that are already pre-fetched.
 

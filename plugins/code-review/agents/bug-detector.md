@@ -16,7 +16,7 @@ A senior engineer reviewing your findings should agree with every single one.
 
 You receive as YAML from the orchestrator:
 - PR summary (from pr-summarizer) — use `intent` to understand what the code is trying to do
-- PR diff (from `.claude-review-context/diff.txt` ensure read it completelly or inline)
+- PR diff (from `./.claude-review-context/diff.txt` ensure read it completelly or inline)
 - CLAUDE.md content (from context-collector) — for project-specific patterns
 - Existing comment dedup keys (from comment-scanner)
 

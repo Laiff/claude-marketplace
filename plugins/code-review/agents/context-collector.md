@@ -11,7 +11,7 @@ This context is shared with all Phase 2 review agents.
 
 ## Steps
 
-1. Check for pre-fetched context at `.claude-review-context/relevant_claude_mds.txt`
+1. Check for pre-fetched context at `./.claude-review-context/relevant_claude_mds.txt`
    - If the file exists, use it as the list of relevant CLAUDE.md paths
    - Read each listed file and collect its full content
 
