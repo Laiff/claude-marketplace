@@ -98,7 +98,7 @@ const result = await workflow(
     repo:        'REPO',
     pr_number:   PR_NUMBER,
     post_flag:   POST_FLAG,
-    context_dir: 'CONTEXT_DIR_OR_NULL',
+    context_dir: 'CONTEXT_DIR',
     head_sha:    'HEAD_SHA_OR_NULL',
     plugin_dir:  '<BASE>',
   }
@@ -129,7 +129,7 @@ with actual values. Set `context_dir` and `head_sha` to `null` when not availabl
 
 **`post_flag`**: Default `false` for dry-run reviews. Set to `true` when the user says `--post`, `post it`, `submit the review`, or equivalent.
 
-**`context_dir`**: Only relevant in CI environments where a pre-fetch step populates context files. In interactive use, set to `null`.
+**`context_dir`**: Only relevant in CI environments where a pre-fetch step populates context files. Always should be provided.
 
 **`head_sha`**: Omit or set to `null` — the pipeline resolves it automatically.
 
