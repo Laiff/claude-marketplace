@@ -33,6 +33,24 @@ also_affects: []                  # set by Phase 4
 dedup_layer_applied: null         # set by Phase 4: exact | proximity | semantic
 ```
 
+## Prior Verification Object
+
+When `is_fix_verification` is true, Phase 2 review agents return a `prior_verification`
+array alongside `findings`. Each entry reports whether a previously flagged issue was
+addressed in the current commit. This data flows to the verdict and compose phases —
+it is NOT part of the findings array.
+
+```yaml
+prior_verification:
+  - dedup_key: "path/to/file.tsx:42:select-renders-blank"   # from comment-scanner dedup_keys
+    description: "Select renders blank when role is 'member'"
+    file: "path/to/file.tsx"
+    line: 42
+    category: BUG                    # original finding category
+    status: fixed                    # fixed | not_fixed | partially_fixed
+    reasoning: "Fallback SelectItem now added for roles absent from availableRoles"
+```
+
 ## Field Ownership
 
 | Phase | Fields SET | Fields READ |
@@ -41,6 +59,10 @@ dedup_layer_applied: null         # set by Phase 4: exact | proximity | semantic
 | Merge step | source_agent | — |
 | Phase 3 (Evidence verifier) | validated, validation_reasoning, adjusted_confidence | All Phase 2 fields |
 | Phase 4 (Dedup and budget) | batch_key, batch_files, batched, also_affects, dedup_layer_applied | All fields |
+
+**Note:** `prior_verification` is a top-level array returned by Phase 2 agents alongside
+`findings`, not a field on individual finding objects. It is only populated when
+`is_fix_verification` is true.
 
 ## Review Verdict Object
 
@@ -63,6 +85,12 @@ verdict:
     CONV: 1
     ARCH: 0
   calibration_applied: []         # VC1-VC5 guards that modified the default verdict
+  prior_verification_summary:       # only present when is_fix_verification is true
+    total: 2
+    fixed: 2
+    not_fixed: 0
+    partially_fixed: 0
+    items: []                        # the prior_verification array from Phase 2
 ```
 
 ### Verdict Field Ownership
@@ -76,6 +104,7 @@ verdict:
 | severity_distribution | Phase 4 | Phase 5 (terminal summary) |
 | category_distribution | Phase 4 | Phase 5 (terminal summary) |
 | calibration_applied | Phase 4 | Debugging, feedback-learner |
+| prior_verification_summary | Workflow JS (merge step) | Phase 5 (verification table in review body) |
 
 ## Rules
 

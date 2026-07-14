@@ -17,6 +17,7 @@ You receive as YAML from the orchestrator:
 - Pipeline stats (from dedup-orchestrator)
 - PR summary (from pr-summarizer)
 - Whether `--post` flag was provided (controls whether to post to GitHub)
+- Prior verification results (from Phase 2, when is_fix_verification is true) — for rendering the verification table
 
 For head SHA, repo, and PR number: read `./.claude-review-context/context.yaml` (structured envelope).
 For inlineability checks: read `./.claude-review-context/file_patches.json` (pre-fetched patches).
@@ -53,6 +54,37 @@ If no findings:
 
 No issues found. Reviewed N files for bugs, CLAUDE.md compliance, and security.
 Verdict: APPROVE
+```
+
+If fix-verification with all prior findings fixed:
+```
+## Code Review — :white_check_mark: Fix Verified — Approved
+
+All prior findings verified as fixed. No new issues found. Reviewed N files for bugs, CLAUDE.md compliance, and security.
+
+### Prior Findings Verification
+
+| # | Status | File | Prior Issue | Verification |
+|---|--------|------|-------------|--------------|
+| 1 | :white_check_mark: Fixed | `file.tsx:L42` | Description of prior finding | What changed to fix it |
+
+Pipeline: Phase 2 produced 0 new findings | Prior verification: N/N fixed → Verdict: APPROVE (V7+FV)
+```
+
+If fix-verification with unfixed prior findings:
+```
+## Code Review — :mag: Fix Incomplete — Comment
+
+0 new issues found, but N prior findings remain unresolved.
+
+### Prior Findings Verification
+
+| # | Status | File | Prior Issue | Verification |
+|---|--------|------|-------------|--------------|
+| 1 | :x: Not Fixed | `file.tsx:L42` | Description of prior finding | What was NOT addressed |
+| 2 | :white_check_mark: Fixed | `file.tsx:L88` | Description of prior finding | What changed to fix it |
+
+Pipeline: Phase 2 produced 0 new findings | Prior verification: M/N fixed → Verdict: COMMENT (unfixed prior findings)
 ```
 
 Classification icons:
@@ -225,6 +257,8 @@ Log these metrics for the feedback-learner pipeline:
 - **Review classification** (security, bugs, conventions, architecture, mixed, clean)
 - **Verdict rule applied** (V1-V7)
 - **Calibration guards triggered** (VC1-VC5)
+- **Prior verification results** (fixed/not_fixed/partially_fixed counts, when is_fix_verification)
+- **Fix-verification verdict override** (whether V7 was overridden to COMMENT due to unfixed prior findings)
 
 ## Link Format
 

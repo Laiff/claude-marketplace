@@ -43,7 +43,10 @@ Rule V6: Only NIT findings remain
          -> COMMENT
 
 Rule V7: 0 findings after all filtering
-         -> APPROVE
+         IF is_fix_verification AND unfixed prior findings exist:
+           -> COMMENT (prior findings not addressed)
+         ELSE:
+           -> APPROVE
 ```
 
 ### Verdict Calibration Guards
@@ -77,15 +80,19 @@ These guards prevent over-aggressive or under-aggressive verdicts:
 - Never REQUEST_CHANGES on draft PRs (they shouldn't reach here due to preflight,
   but if they do, cap at COMMENT)
 
-**VC6: Fix-verification consistency**
+**VC6: Fix-verification verdict guard**
 - When `is_fix_verification: true`, findings that contradict the prior review's explicit
   recommendations should have been dropped by Guard G11 before reaching the verdict stage.
 - If such findings somehow survive to Phase 4, the dedup-orchestrator MUST drop them and
   log the G11 violation.
-- The verdict for a fix-verification PR that correctly implements the prior review's
-  recommendation SHOULD be APPROVE (if no new issues exist) or COMMENT (if minor
-  observations exist). REQUEST_CHANGES is only appropriate if the fix itself introduces
-  a genuinely new critical issue not present in the prior commit.
+- When `prior_verification_summary` is present and `not_fixed > 0` or `partially_fixed > 0`, 
+  the verdict MUST NOT be APPROVE even if 0 new findings exist. 
+  Override V7 to COMMENT with reasoning noting unfixed prior findings.
+- The verdict for a fix-verification PR that correctly implements ALL prior review
+  recommendations SHOULD be APPROVE (classification: `fix-verified`). If only some are
+  fixed, use COMMENT (classification: `fix-incomplete`).
+- REQUEST_CHANGES is only appropriate if the fix itself introduces a genuinely new
+  critical issue not present in the prior commit.
 
 ---
 
@@ -103,6 +110,8 @@ appears in the terminal summary, PR summary comment, and feedback metrics.
 | `conventions` | Majority of findings are CONV | :memo: |
 | `architecture` | Majority of findings are ARCH | :building_construction: |
 | `mixed` | No single category has majority (>50%) | :mag: |
+| `fix-verified` | Fix-verification: all prior findings verified as fixed | :white_check_mark: |
+| `fix-incomplete` | Fix-verification: some prior findings remain unfixed | :mag: |
 | `clean` | 0 findings — PR passed all checks | :white_check_mark: |
 
 ### Classification Algorithm
@@ -110,6 +119,13 @@ appears in the terminal summary, PR summary comment, and feedback metrics.
 ```
 1. Count findings by category: {BUG: N, SEC: N, CONV: N, ARCH: N}
 2. Total = sum of all counts
+
+IF is_fix_verification AND prior_verification_summary exists:
+  IF prior_verification_summary.not_fixed > 0 OR prior_verification_summary.partially_fixed > 0:
+    classification = "fix-incomplete"
+  ELIF total == 0:
+    classification = "fix-verified"
+  // else fall through to normal classification
 
 IF total == 0:
   classification = "clean"

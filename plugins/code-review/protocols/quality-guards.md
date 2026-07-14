@@ -157,3 +157,21 @@ When `is_fix_verification: true` (prior bot review exists on an older commit):
   where a vulnerability exists but no patch is available within that major line. If no consumers
   of the original major version exist in the dependency tree (no lockfile snapshot), this is a
   low-risk prophylactic measure, not a CRIT bug.
+
+## G12: Prior Finding Verification Report
+
+**Observed failure**: Fix-verification re-review approved PR with 2 unresolved findings.
+G3 (dedup) and G11 (fix-verification) correctly prevented re-posting, but no mechanism
+reported that prior findings remained unfixed. Result: silent auto-approval.
+
+When `is_fix_verification: true` and existing comment `dedup_keys` are present:
+
+- For EACH dedup_key, determine whether the issue was **fixed**, **not_fixed**, or
+  **partially_fixed** in the current commit by examining the diff and current code state.
+- Report your assessment in the `prior_verification` array (a top-level field alongside
+  `findings` — see `protocols/finding-schema.md` for schema).
+- This is SEPARATE from `findings` — it does not re-flag issues or violate G3/G11.
+  It reports fix status for the verdict and compose phases.
+- Include specific reasoning: what changed (or didn't) in the code since the prior review.
+- If `is_fix_verification` is false or no `dedup_keys` exist, return an empty
+  `prior_verification` array.

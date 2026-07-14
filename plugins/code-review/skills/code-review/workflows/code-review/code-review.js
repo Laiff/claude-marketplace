@@ -91,6 +91,23 @@ const PREFLIGHT_SCHEMA = {
   },
 }
 
+const PRIOR_VERIFICATION_ITEMS = {
+  type: 'array',
+  items: {
+    type: 'object',
+    required: ['dedup_key', 'description', 'status', 'reasoning'],
+    properties: {
+      dedup_key:    { type: 'string' },
+      description:  { type: 'string' },
+      file:         { type: 'string' },
+      line:         { type: 'number' },
+      category:     { type: 'string' },
+      status:       { type: 'string', enum: ['fixed', 'not_fixed', 'partially_fixed'] },
+      reasoning:    { type: 'string' },
+    },
+  },
+}
+
 const FINDING_SCHEMA = {
   type: 'object',
   required: ['findings'],
@@ -129,6 +146,8 @@ const FINDING_SCHEMA = {
         },
       },
     },
+    // Fix-verification: review agents report fix status of prior findings
+    prior_verification: PRIOR_VERIFICATION_ITEMS,
   },
 }
 
@@ -184,7 +203,7 @@ const DEDUP_SCHEMA = {
       required: ['action', 'classification', 'reasoning', 'rule_applied'],
       properties: {
         action:                { type: 'string', enum: ['APPROVE', 'REQUEST_CHANGES', 'COMMENT'] },
-        classification:        { type: 'string', enum: ['security', 'bugs', 'conventions', 'architecture', 'mixed', 'clean'] },
+        classification:        { type: 'string', enum: ['security', 'bugs', 'conventions', 'architecture', 'mixed', 'clean', 'fix-verified', 'fix-incomplete'] },
         reasoning:             { type: 'string' },
         rule_applied:          { type: 'string' },
         severity_distribution: { type: 'object' },
@@ -224,7 +243,10 @@ MANDATORY QUALITY GUARDS:
   Public-facing services (family-portal) use full severity.
 - G9 FALSE POSITIVES: When in doubt, do NOT flag. Check 20 lines context.
 - G11 FIX-VERIFICATION: If is_fix_verification is true, do NOT contradict prior review
-  recommendations. Only flag genuinely NEW issues since prior review commit.`
+  recommendations. Only flag genuinely NEW issues since prior review commit.
+- G12 PRIOR VERIFICATION: If is_fix_verification is true, for EACH existing dedup_key,
+  report whether the issue was fixed/not_fixed/partially_fixed in prior_verification[].
+  This is SEPARATE from findings[] — it reports fix status, not new issues.`
 
 const FINDING_INIT_FIELDS = `
 Initialize Phase 3/4 fields as defaults:
@@ -459,7 +481,15 @@ ${QUALITY_GUARDS_BRIEF}
 
 ${FINDING_INIT_FIELDS}
 
-Return ONLY a JSON object with a "findings" array. Empty array is a valid result.`
+Return a JSON object with:
+- "findings" array (new issues only — empty array is valid)
+- "prior_verification" array (fix status of each existing dedup_key — empty if not fix-verification)
+
+PRIOR VERIFICATION (G12): If is_fix_verification is true AND dedup_keys exist above,
+for EACH dedup_key determine whether the prior issue was fixed, not_fixed, or partially_fixed
+in the current commit. Examine the diff and current code. Return one entry per dedup_key:
+{ dedup_key, description (1-line summary), file, line, category, status, reasoning }.
+If is_fix_verification is false or no dedup_keys, return prior_verification: [].`
 
 const [rawConv, rawBug, rawSec] = await parallel([
   // ── 2A: Convention Checker ──
@@ -544,7 +574,35 @@ const convCount = (rawConv?.findings ?? []).length
 const bugCount  = (rawBug?.findings  ?? []).length
 const secCount  = (rawSec?.findings  ?? []).length
 
+// ── Merge prior_verification from all review agents (dedup by dedup_key) ────
+
+const rawPriorVerification = [
+  ...(rawConv?.prior_verification ?? []),
+  ...(rawBug?.prior_verification  ?? []),
+  ...(rawSec?.prior_verification  ?? []),
+]
+const priorVerificationMap = new Map()
+for (const v of rawPriorVerification) {
+  const existing = priorVerificationMap.get(v.dedup_key)
+  if (!existing || (v.reasoning ?? '').length > (existing.reasoning ?? '').length) {
+    priorVerificationMap.set(v.dedup_key, v)
+  }
+}
+const priorVerification = [...priorVerificationMap.values()]
+const priorVerificationSummary = priorVerification.length > 0
+  ? {
+      total:            priorVerification.length,
+      fixed:            priorVerification.filter(v => v.status === 'fixed').length,
+      not_fixed:        priorVerification.filter(v => v.status === 'not_fixed').length,
+      partially_fixed:  priorVerification.filter(v => v.status === 'partially_fixed').length,
+      items:            priorVerification,
+    }
+  : null
+
 log(`[Phase 2] ${allFindings.length} findings (conv: ${convCount}, bug: ${bugCount}, sec: ${secCount})`)
+if (priorVerificationSummary) {
+  log(`[Phase 2] Prior verification: ${priorVerificationSummary.fixed}/${priorVerificationSummary.total} fixed, ${priorVerificationSummary.not_fixed} not fixed, ${priorVerificationSummary.partially_fixed} partially fixed`)
+}
 
 
 // ============================================================================
@@ -553,25 +611,83 @@ log(`[Phase 2] ${allFindings.length} findings (conv: ${convCount}, bug: ${bugCou
 // ============================================================================
 
 if (allFindings.length === 0) {
-  log('0 findings — clean PR, skipping Phase 3+4')
+  // ── Fix-verification: check if prior findings remain unfixed (VC6) ────────
+  const hasUnfixedPrior = isFixVerification && priorVerificationSummary
+    && (priorVerificationSummary.not_fixed > 0 || priorVerificationSummary.partially_fixed > 0)
+  const allPriorFixed = isFixVerification && priorVerificationSummary
+    && priorVerificationSummary.not_fixed === 0 && priorVerificationSummary.partially_fixed === 0
+
+  const shortCircuitVerdict  = hasUnfixedPrior ? 'COMMENT' : 'APPROVE'
+  const shortCircuitClass    = hasUnfixedPrior ? 'fix-incomplete'
+                             : allPriorFixed   ? 'fix-verified'
+                             :                   'clean'
+  const shortCircuitIcon     = hasUnfixedPrior ? ':mag:' : ':white_check_mark:'
+  const shortCircuitLabel    = hasUnfixedPrior ? 'Fix Incomplete' : allPriorFixed ? 'Fix Verified' : 'Clean'
+  const shortCircuitRule     = hasUnfixedPrior ? 'V7+VC6' : 'V7'
+  const shortCircuitFlag     = hasUnfixedPrior ? '--comment' : '--approve'
+
+  if (hasUnfixedPrior) {
+    log(`0 new findings but ${priorVerificationSummary.not_fixed} prior findings NOT fixed — COMMENT verdict (VC6 override)`)
+  } else if (allPriorFixed) {
+    log(`0 new findings, all ${priorVerificationSummary.total} prior findings verified fixed — APPROVE (fix-verified)`)
+  } else {
+    log('0 findings — clean PR, skipping Phase 3+4')
+  }
+
+  // ── Build verification table markdown for the composer ────────────────────
+  const verificationTableMd = priorVerificationSummary
+    ? `\n### Prior Findings Verification\n\n` +
+      `| # | Status | File | Prior Issue | Verification |\n` +
+      `|---|--------|------|-------------|---------------|\n` +
+      priorVerificationSummary.items.map((v, i) => {
+        const icon = v.status === 'fixed' ? ':white_check_mark: Fixed'
+                   : v.status === 'partially_fixed' ? ':warning: Partial'
+                   : ':x: Not Fixed'
+        return `| ${i + 1} | ${icon} | \`${v.file}:${v.line}\` | ${v.description} | ${v.reasoning} |`
+      }).join('\n') +
+      `\n`
+    : ''
+
+  const verificationStats = priorVerificationSummary
+    ? `Prior verification: ${priorVerificationSummary.fixed}/${priorVerificationSummary.total} fixed`
+    : ''
+
+  const shortCircuitReasoning = hasUnfixedPrior
+    ? `0 new issues, but ${priorVerificationSummary.not_fixed} prior findings remain unfixed`
+    : allPriorFixed
+    ? `All ${priorVerificationSummary.total} prior findings verified as fixed, no new issues`
+    : `No issues found. Reviewed ${prSummary.files_changed} files for bugs, CLAUDE.md compliance, and security.`
 
   phase('Compose')
   const cleanOutput = await agent(
-    `You are the output-composer agent. PR #${PR_NUMBER} in ${FULL_REPO} passed all checks with ZERO findings.
+    `You are the output-composer agent. PR #${PR_NUMBER} in ${FULL_REPO} has ZERO new findings.
 ${agentRef('output-composer')}
 
+Fix-verification mode: ${isFixVerification}
+Verdict: ${shortCircuitVerdict} (rule ${shortCircuitRule})
+Classification: ${shortCircuitClass}
+Reasoning: ${shortCircuitReasoning}
+
+${priorVerificationSummary ? `PRIOR VERIFICATION RESULTS:
+\`\`\`json
+${JSON.stringify(priorVerificationSummary, null, 2)}
+\`\`\`
+` : ''}
 1. Print a terminal summary:
-## Code Review — :white_check_mark: Clean — Approved
+## Code Review — ${shortCircuitIcon} ${shortCircuitLabel} — ${shortCircuitVerdict === 'APPROVE' ? 'Approved' : 'Comment'}
 
-No issues found. Reviewed ${prSummary.files_changed} files for bugs, CLAUDE.md compliance, and security.
-Verdict: APPROVE (rule V7)
-Pipeline: Phase 2 produced 0 findings → Phase 3 skipped → Phase 4 skipped
+${shortCircuitReasoning}
+${verificationTableMd}
+Verdict: ${shortCircuitVerdict} — "${shortCircuitReasoning}"
+Pipeline: Phase 2 produced 0 new findings → Phases 3-4 skipped${verificationStats ? ` | ${verificationStats}` : ''} → Verdict: ${shortCircuitVerdict} (${shortCircuitRule})
 
-2. ${POST_FLAG ? `Post a single GitHub review:
-gh pr review ${PR_NUMBER} --repo ${FULL_REPO} --approve --body "## Code Review — :white_check_mark: Clean — Approved
+2. ${POST_FLAG ? `Post a single GitHub review using ${shortCircuitFlag}:
+gh pr review ${PR_NUMBER} --repo ${FULL_REPO} ${shortCircuitFlag} --body "<the review body markdown>"
 
-No issues found. Reviewed ${prSummary.files_changed} files for bugs, CLAUDE.md compliance, and security.
-Pipeline: Phase 2 produced 0 → Phases 3-4 skipped → Verdict: APPROVE (V7)"` : 'Do NOT post to GitHub (--post flag is false).'}
+The review body MUST include:
+- The classification header: ## Code Review — ${shortCircuitIcon} ${shortCircuitLabel} — ${shortCircuitVerdict === 'APPROVE' ? 'Approved' : 'Comment'}
+- The reasoning line
+${priorVerificationSummary ? '- The Prior Findings Verification table (render from the JSON above)\n' : ''}- The pipeline stats line` : 'Do NOT post to GitHub (--post flag is false).'}
 
 Return a summary of what was done.`,
     { label: 'output-composer-clean', phase: 'Compose', model: 'sonnet',
@@ -579,10 +695,13 @@ Return a summary of what was done.`,
   )
 
   return {
-    pr: `${FULL_REPO}#${PR_NUMBER}`,
-    verdict: 'APPROVE',
-    classification: 'clean',
-    findings_count: 0,
+    pr:               `${FULL_REPO}#${PR_NUMBER}`,
+    verdict:          shortCircuitVerdict,
+    classification:   shortCircuitClass,
+    reasoning:        shortCircuitReasoning,
+    rule_applied:     shortCircuitRule,
+    findings_count:   0,
+    prior_verification: priorVerificationSummary,
     stats: { phase2: 0, phase3: 0, phase4: 0 },
     output: cleanOutput,
   }
@@ -866,6 +985,7 @@ return {
   reasoning:        verdict.reasoning,
   rule_applied:     verdict.rule_applied,
   findings_count:   finalFindings.length,
+  prior_verification: priorVerificationSummary,
   stats: {
     phase2_generated:  allFindings.length,
     phase2_by_agent:   { conv: convCount, bug: bugCount, sec: secCount },
