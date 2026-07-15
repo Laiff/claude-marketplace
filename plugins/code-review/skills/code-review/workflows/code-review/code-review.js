@@ -880,7 +880,7 @@ Classify each finding as:
 
 Post via gh api (preferred atomic method):
 \`\`\`bash
-gh api repos/${FULL_REPO}/pulls/${PR_NUMBER}/reviews --method POST --input /tmp/review_payload.json
+gh api repos/${FULL_REPO}/pulls/${PR_NUMBER}/reviews --method POST --input ${CTX}/review_payload.json
 \`\`\`
 
 Payload format:
@@ -895,8 +895,8 @@ Comments use "line" + "side": "RIGHT" (NOT legacy "position" field).
 
 ${CTX ? `Fallback chain:
 1. gh api (preferred)
-2. python3 ${CTX}/post_review.py /tmp/review_payload.json ${FULL_REPO} ${PR_NUMBER}
-3. gh pr review ${PR_NUMBER} --repo ${FULL_REPO} --<flag> --body-file /tmp/review.md` : `Fallback: gh pr review ${PR_NUMBER} --repo ${FULL_REPO} --<flag> --body "..."`}
+2. python3 ${CTX}/post_review.py ${CTX}/review_payload.json ${FULL_REPO} ${PR_NUMBER}
+3. gh pr review ${PR_NUMBER} --repo ${FULL_REPO} --<flag> --body-file ${CTX}/review_payload.json` : `Fallback: gh pr review ${PR_NUMBER} --repo ${FULL_REPO} --<flag> --body "..."`}
 
 CRITICAL LINE INTEGRITY:
 - NEVER relocate a comment to a different line.

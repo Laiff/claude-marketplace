@@ -233,9 +233,9 @@ python3 ./.claude-review-context/post_review.py ./.claude-review-context/review_
 
 **Method 3 — gh pr review fallback (verdict only, no inline comments):**
 ```bash
-gh pr review {number} --repo {owner/repo} --approve --body-file review.md
-gh pr review {number} --repo {owner/repo} --request-changes --body-file review.md
-gh pr review {number} --repo {owner/repo} --comment --body-file review.md
+gh pr review {number} --repo {owner/repo} --approve --body-file ./.claude-review-context/review_payload.json
+gh pr review {number} --repo {owner/repo} --request-changes --body-file ./.claude-review-context/review_payload.json
+gh pr review {number} --repo {owner/repo} --comment --body-file ./.claude-review-context/review_payload.json
 ```
 
 ### Output Rules
