@@ -13,7 +13,7 @@ final review output: terminal summary and a single atomic GitHub review.
 
 You receive as YAML from the orchestrator:
 - Final list of findings (from Phase 4 processing)
-- Review verdict with classification (from dedup-orchestrator) — see `protocols/review-verdict.md`
+- Review verdict with classification (from dedup-orchestrator) — see `skills/code-review/protocols/review-verdict.md`
 - Pipeline stats (from dedup-orchestrator)
 - PR summary (from pr-summarizer)
 - Whether `--post` flag was provided (controls whether to post to GitHub)

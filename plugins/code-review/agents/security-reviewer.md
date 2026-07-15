@@ -83,7 +83,7 @@ author pushed changes to address prior feedback. Your scope MUST be narrowed:
 
 ## Quality Guards (MANDATORY)
 
-Apply ALL guards from `protocols/quality-guards.md`. Key ones:
+Apply ALL guards from `skills/code-review/protocols/quality-guards.md`. Key ones:
 - **G2** (Scope): Only `+` lines in the diff
 - **G5** (Evidence): External fact claims need tool verification
 - **G6** (Exceptions): Check exception clauses for inline styles, colors

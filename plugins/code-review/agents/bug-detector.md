@@ -70,7 +70,7 @@ If any answer makes you doubt, do NOT emit the finding.
 
 ## Quality Guards (MANDATORY)
 
-Apply ALL guards from `protocols/quality-guards.md`. Key ones:
+Apply ALL guards from `skills/code-review/protocols/quality-guards.md`. Key ones:
 - **G1** (Noise): No empty or trivial findings
 - **G2** (Scope): Only `+` lines in the diff
 - **G5** (Evidence): External fact claims capped at 25 confidence

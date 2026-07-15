@@ -78,7 +78,7 @@ If total = 0: This is a GOOD outcome. The review is clean.
 ## Step 4: Compute Review Verdict
 
 After budget enforcement, determine the review action and classification using the
-**surviving findings only**. See `protocols/review-verdict.md` for full decision matrix.
+**surviving findings only**. See `skills/code-review/protocols/review-verdict.md` for full decision matrix.
 
 ### Verdict Decision
 

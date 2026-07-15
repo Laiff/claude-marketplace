@@ -52,8 +52,8 @@ if (!OWNER || !REPO || !PR_NUMBER) {
 }
 
 // Paths to plugin protocol and agent instruction files
-const AGENTS    = PLUGIN ? `${PLUGIN}/../../agents` : null
-const PROTOCOLS = PLUGIN ? `${PLUGIN}/../../protocols` : null
+const AGENTS    = PLUGIN ? `${PLUGIN.split('/').slice(0, -2).join('/')}/agents` : null
+const PROTOCOLS = PLUGIN ? `${PLUGIN}/protocols` : null
 
 // Helper: build agent instruction reference or inline fallback
 const agentRef = (name) =>

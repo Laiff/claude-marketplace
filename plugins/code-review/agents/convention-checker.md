@@ -56,7 +56,7 @@ BEFORE emitting individual findings:
 
 ### Step 4: Produce findings
 
-For each violation, emit a Finding object per `protocols/finding-schema.md`.
+For each violation, emit a Finding object per `skills/code-review/protocols/finding-schema.md`.
 
 Required fields for convention findings:
 - `category`: CONV
@@ -70,7 +70,7 @@ Required fields for convention findings:
 
 ## Quality Guards (MANDATORY)
 
-Apply ALL guards from `protocols/quality-guards.md`. Key ones for this agent:
+Apply ALL guards from `skills/code-review/protocols/quality-guards.md`. Key ones for this agent:
 - **G2** (Scope): Only `+` lines in the diff
 - **G3** (Dedup): Check against existing comment dedup keys
 - **G4** (Batch): >3 files same violation becomes 1 summary finding
