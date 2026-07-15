@@ -209,7 +209,7 @@ the finding's `line` field. No diff-position computation is needed.
 #   ]
 # }
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
-  --method POST --input payload.json
+  --method POST --input ./.claude-review-context/review_payload.json
 ```
 
 Each comment object MUST have:
@@ -228,7 +228,7 @@ For multi-line comments (finding has `end_line`):
 
 **Method 2 — Python utility fallback:**
 ```bash
-python3 ./.claude-review-context/post_review.py payload.json {owner/repo} {number}
+python3 ./.claude-review-context/post_review.py ./.claude-review-context/review_payload.json {owner/repo} {number}
 ```
 
 **Method 3 — gh pr review fallback (verdict only, no inline comments):**
