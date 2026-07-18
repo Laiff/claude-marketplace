@@ -309,10 +309,10 @@ Gather ALL relevant CLAUDE.md content for PR #${PR_NUMBER} in ${FULL_REPO}.
 ${CTX ? `Read ${CTX}/relevant_claude_mds.txt for the list of relevant CLAUDE.md paths, then read each file completely.` : `Run: gh pr view ${PR_NUMBER} --repo ${FULL_REPO} --json files to find changed areas, then read CLAUDE.md files in those directories.`}
 
 For each CLAUDE.md found, extract:
-- Full content (downstream agents need exact text for quoting)
 - Numbered conventions
+- Numbered constraints
 
-Return a JSON object with a "claude_mds" array, each with: path, scope, content, conventions.`,
+Return a JSON object with a "claude_mds" array, each with: path, scope, conventions, constraints.`,
     { label: 'context-collector', phase: 'Context', model: 'haiku',
       agentType: 'code-review:context-collector',
       schema: {
@@ -326,8 +326,10 @@ Return a JSON object with a "claude_mds" array, each with: path, scope, content,
               properties: {
                 path:        { type: 'string' },
                 scope:       { type: 'string' },
-                content:     { type: 'string' },
+                applies_to:  { type: 'string' },
                 conventions: { type: 'array', items: { type: 'object',
+                  properties: { number: { type: 'number' }, text: { type: 'string' } } } },
+                constraints: { type: 'array', items: { type: 'object',
                   properties: { number: { type: 'number' }, text: { type: 'string' } } } },
               },
             },
@@ -500,6 +502,9 @@ ${agentRef('convention-checker')}
 Audit every ADDED or MODIFIED line (+ lines only) in PR #${PR_NUMBER} (${FULL_REPO}) for CLAUDE.md convention violations.
 
 ${reviewPromptBase}
+\`\`\`json
+${JSON.stringify(rawContext?.claude_mds, null, "  ")}
+\`\`\`
 
 CLAIM TYPE: All convention findings must have claim_type: "claude_md".
 CONFIDENCE: 90-100 for clear CLAUDE.md violations (the text is in context).

@@ -36,19 +36,20 @@ claude_mds:
   - path: "CLAUDE.md"
     scope: root
     applies_to: "**/*"
-    content: |
-      full file content here...
     conventions:
       - number: 1
         text: "Convention text here"
       - number: 2
         text: "Another convention"
+    constraints:
+      - number: 1
+        text: "constraint text here"
+      - number: 2
+        text: "Another constraint"
 
   - path: "turbo/packages/ds/CLAUDE.md"
     scope: "turbo/packages/ds"
     applies_to: "turbo/packages/ds/**/*"
-    content: |
-      full file content here...
     conventions:
       - number: 9
         text: "Add tags: ['autodocs'] to every story meta"
@@ -56,7 +57,7 @@ claude_mds:
 
 ## Communication rules
 
-- Return the FULL content of each file — downstream agents need exact text for quoting
 - Include the file path so review agents can link to specific conventions
 - Extract conventions as structured data so convention-checker can iterate over them
+- Extract constraints as structured data so convention-checker can iterate over them
 - Use YAML format for all structured output
