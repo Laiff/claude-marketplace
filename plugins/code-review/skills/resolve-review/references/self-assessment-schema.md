@@ -22,6 +22,8 @@ consecutive_thread_stalls:
   count: 0
   thread_id: null
 
+body_findings_addressed: 0
+
 classification_totals:
   valid_bugs: 2
   valid_conventions: 1
@@ -57,6 +59,7 @@ self_assessment:
   reviews:
     unresolved_threads: 0
     unreplied_comments: 0
+    unaddressed_body_findings: 0
     addressed_this_iteration: 4
     classifications:
       valid_bugs: 1
@@ -76,6 +79,7 @@ self_assessment:
     no_changes_requested: true
     all_threads_resolved: true
     all_comments_replied: true
+    all_body_findings_addressed: true
     bot_reviews_minimized: true
     converged: true
 
@@ -116,6 +120,7 @@ ALL must be true simultaneously:
 - No active CHANGES_REQUESTED reviews
 - Zero unresolved review threads
 - Zero unreplied root inline comments
+- Zero unaddressed body findings (Additional Findings from review bodies)
 - All bot review summaries minimized (Phase 6)
 
 ## Gate File Integration

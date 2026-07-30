@@ -88,6 +88,8 @@ This ensures the reviewer can easily reopen if the agent's assessment is wrong.
 
 ## Agent Dispatch Pattern
 
+### For Thread-Based Comments (unresolved review threads)
+
 For each unresolved thread, the dispatched agent must:
 
 1. Read the full thread (all comments, not just root)
@@ -99,3 +101,30 @@ For each unresolved thread, the dispatched agent must:
 7. Call `scripts/resolve-thread.sh <THREAD_ID>`
 
 Fix agents must NOT post general PR comments — only thread replies on threads they address.
+
+### For Body-Level Findings (Additional Findings not in diff)
+
+Body findings are extracted from the review body's "Additional Findings (not in diff)" section. These reference code that is NOT in the PR diff but was flagged by the code-review pipeline. They have no GitHub review thread — they exist only as text in the review summary.
+
+For each body finding, the dispatched agent must:
+
+1. Read the actual code at the referenced file and approximate line (~line N is approximate)
+2. Read surrounding context (20+ lines) to understand the code
+3. The code is NOT in the PR diff — check if it is related to PR changes (called by changed code, shares state, etc.)
+4. If gate file exists, read scope and design decisions
+5. Classify using this guide (same 9 categories apply)
+6. Execute the action:
+   - **Fix categories (valid bug/convention/improvement):** Fix the code and commit. Even though the code is not in the diff, the code-review flagged it as an issue — it should be fixed.
+   - **Non-fix categories:** Post a PR comment (`gh pr comment $PR_NUMBER --body "..."`) explaining the classification with evidence. Include the finding reference (file, line, description) so the reviewer can identify which body finding is being addressed.
+7. There is NO thread to resolve — body findings are addressed by fixing the code and/or posting a PR comment.
+
+**Reply format for body finding PR comments:**
+```
+Re: Additional Finding — `path/to/file` (~line N) — [Category]
+
+[Action taken / reasoning]
+
+Please reopen if you disagree or I've misunderstood.
+```
+
+**Scope note:** Body findings are explicitly about code NOT in the diff. The normal scope guard ("no files outside the PR diff") is relaxed for these — the code-review identified them as related issues. However, the agent should still verify the issue exists and is genuine before acting.

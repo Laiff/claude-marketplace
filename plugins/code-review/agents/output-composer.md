@@ -122,8 +122,14 @@ Split findings into two groups:
 - A line is inlineable if it appears as a `+` or context line in any hunk of the PR diff
 
 **Non-inlineable** — finding line is NOT in the diff (e.g., unchanged code, batched findings):
-- These go into the review **body** as a "Additional findings" section
+- These go into the review **body** as an "Additional Findings" section
 - Do NOT post these as separate PR comments
+- Use the **exact format** below for each finding — this format is machine-parsed by the resolve-review skill's `body-findings.sh` script:
+  ```
+  **[SEVERITY] Category** — `path/to/file.ext` (~line N)
+  Description of the finding...
+  ```
+  Where SEVERITY is `CRIT`, `NORM`, or `NIT`, and Category is `Bug`, `Convention`, `Security`, or `Architecture`
 
 ### Compose Inline Comments
 
@@ -158,13 +164,18 @@ Build a single review body that includes:
 1. Classification header: `## Code Review — {icon} {classification} — {verdict_label}`
 2. Verdict reasoning
 3. Finding summary table (all findings, both inline and non-inlineable)
-4. **Non-inlineable findings section** (if any findings couldn't be posted inline):
+4. **Non-inlineable findings section** (if any findings couldn't be posted inline).
+   Use EXACTLY this format — `body-findings.sh` in resolve-review parses it:
    ```markdown
    ### Additional Findings (not in diff)
 
-   **[NORM] Convention** — `.github/workflows/file.yml` (~line 12)
+   **[NORM] Convention** — `path/to/file.ext` (~line 12)
    Description of the finding...
+
+   **[CRIT] Bug** — `src/utils.ts` (~line 45)
+   Another finding description...
    ```
+   Each finding MUST follow: `**[SEVERITY] Category** — \`file_path\` (~line N)` on one line, description on the next line(s). Do NOT vary this format — it is machine-parsed downstream.
 5. Pipeline stats: `Phase 2 produced N -> Phase 3 validated M -> Phase 4 deduped to K`
 
 This review body is the ONLY summary. Do NOT post a separate summary comment.

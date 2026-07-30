@@ -47,6 +47,7 @@ All scripts live in `scripts/` relative to this skill directory. Execute directl
 | `failed-run-logs.sh` | `<BRANCH> [TAIL]` | Failed CI run logs, last N lines (default 200) |
 | `resolve-thread.sh` | `<THREAD_ID>` | Resolve a single review thread via GraphQL mutation |
 | `dismiss-resolved-reviews.sh` | `<PR>` | Minimize resolved bot review summaries (RESOLVED/OUTDATED). Honors `$REPO` |
+| `body-findings.sh` | `<PR>` | Extract "Additional Findings (not in diff)" from bot review bodies → `[{review_id, author, finding_type, file, line, description, review_state}]`. Honors `$REPO` |
 | `branch-freshness.sh` | `<BRANCH> <BASE>` | Commits ahead/behind → `{ahead, behind, recommendation}` |
 
 Scripts that query the GitHub API honor the `REPO` env var (auto-detected if unset):
@@ -91,11 +92,14 @@ Dispatch agent(s) to run in parallel:
 - `scripts/blocking-reviews.sh $PR_NUMBER`
 - `scripts/unresolved-threads.sh $PR_NUMBER`
 - `scripts/unreplied-comments.sh $PR_NUMBER`
+- `scripts/body-findings.sh $PR_NUMBER`
 
 | Result | Action |
 |--------|--------|
-| Unresolved threads or unreplied comments exist | → Phase 5 (Address) |
+| Unresolved threads, unreplied comments, or body findings exist | → Phase 5 (Address) |
 | All clear + CI green | → Phase 6 (Dismiss Reviews) → Phase 7 with `converged: true` |
+
+**Body findings** are review comments embedded in the review body under "Additional Findings (not in diff)". These are findings about code NOT in the PR diff — they have no GitHub review thread and would otherwise be dismissed without action. They must be addressed with the same rigor as thread-based comments.
 
 ### Phase 4 — Fix CI Failures
 
@@ -118,6 +122,10 @@ Agent instructions:
 
 ### Phase 5 — Address Review Comments
 
+Two types of review comments need addressing:
+
+#### 5A — Thread-Based Comments (inline review comments)
+
 For each unresolved thread, dispatch a dedicated agent that follows the classification guide in `references/classification-guide.md`.
 
 The agent receives:
@@ -132,13 +140,36 @@ For each thread the agent must:
 4. Execute the action (fix / reply)
 5. Run `scripts/resolve-thread.sh <THREAD_ID>` to resolve
 
-After all threads: commit fixes in a single commit `fix(review): address review feedback`, push, STOP.
+#### 5B — Body-Level Findings (Additional Findings not in diff)
+
+For each body finding (from `scripts/body-findings.sh` output), dispatch a dedicated agent that follows the classification guide in `references/classification-guide.md` using the **body finding** workflow variant.
+
+The agent receives:
+- Body finding data: `{review_id, finding_type, category, file, line, description, review_state}`
+- Gate file path and scope (if exists)
+- Instruction to read CLAUDE.md + turbo/CLAUDE.md before classifying
+
+For each body finding the agent must:
+1. Read the actual code at the referenced file and approximate line
+2. Understand the finding description and verify whether the issue exists
+3. Classify per `references/classification-guide.md` (9 categories, priority order)
+4. Execute the action:
+   - **If valid (bug/convention/improvement):** Fix the code, even though it's not in the PR diff — these are legitimate issues in code the PR touches or depends on. Reply on the review with a PR comment confirming the fix.
+   - **If false positive/preference/out of scope:** Reply on the review explaining why, with evidence.
+   - **If stale/already handled:** Reply on the review with evidence.
+5. Post a reply as a **PR issue comment** (`gh pr comment $PR_NUMBER --body "..."`) referencing the finding, since body findings have no thread to reply to or resolve.
+
+**Important:** Body findings reference code NOT in the diff. The scope guard from Phase 4 is relaxed for these — if the code-review identified them as issues, they are in-scope for fixing. The agent should still verify the issue exists before acting.
+
+#### Post-addressing
+
+After all threads and body findings: commit fixes in a single commit `fix(review): address review feedback`, push, STOP.
 
 **Never re-check convergence in the same iteration that made changes.**
 
 ### Phase 6 — Dismiss Resolved Reviews
 
-Runs only when convergence is confirmed (all threads resolved, CI green, no blockers).
+Runs only when convergence is confirmed (all threads resolved, all body findings addressed, CI green, no blockers).
 Collapses bot review summaries so the PR timeline is clean for the human merge decision.
 
 1. Run `scripts/dismiss-resolved-reviews.sh $PR_NUMBER`
@@ -169,6 +200,7 @@ Runs after EVERY iteration. Follow the schema in `references/self-assessment-sch
 - No CHANGES_REQUESTED reviews
 - Zero unresolved threads
 - Zero unreplied comments
+- Zero unaddressed body findings
 - All bot review summaries minimized (Phase 6 complete)
 
 If converged:
@@ -196,4 +228,4 @@ Follows CLAUDE.md rule 11 — orchestrator-only:
 
 - **`references/classification-guide.md`** — 9-category review comment classification with verification checklist and reply templates
 - **`references/self-assessment-schema.md`** — state file format, self-assessment YAML schema, escalation rules, convergence criteria
-- **`scripts/`** — 9 parameterized bash scripts, all executable directly with `bash scripts/<name>.sh <args>`
+- **`scripts/`** — 10 parameterized bash scripts, all executable directly with `bash scripts/<name>.sh <args>`

@@ -883,6 +883,14 @@ Classify each finding as:
 - Inlineable: finding's line is inside a diff hunk${filePatchesSource ? ` (check ${filePatchesSource})` : ''}
 - Non-inlineable: line NOT in diff → goes in review body under "Additional Findings"
 
+NON-INLINEABLE FORMAT (CRITICAL — machine-parsed by resolve-review):
+Each non-inlineable finding MUST follow this exact format:
+**[SEVERITY] Category** — \`path/to/file.ext\` (~line N)
+Description of the finding...
+
+Where SEVERITY is CRIT/NORM/NIT and Category is Bug/Convention/Security/Architecture.
+Do NOT vary this format — body-findings.sh parses it downstream.
+
 Post via gh api (preferred atomic method):
 \`\`\`bash
 gh api repos/${FULL_REPO}/pulls/${PR_NUMBER}/reviews --method POST --input ${CTX}/review_payload.json
