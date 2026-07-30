@@ -128,3 +128,40 @@ Please reopen if you disagree or I've misunderstood.
 ```
 
 **Scope note:** Body findings are explicitly about code NOT in the diff. The normal scope guard ("no files outside the PR diff") is relaxed for these — the code-review identified them as related issues. However, the agent should still verify the issue exists and is genuine before acting.
+
+### For Human Review Body Comments
+
+Human reviewers leave feedback in their review body text — especially with CHANGES_REQUESTED reviews. This feedback is high-level, not structured per-file like bot findings. It does NOT use the 9-category classification system.
+
+**Key differences from bot findings:**
+- **Human feedback is authoritative** — do not classify as "false positive" or "preference/style"
+- **Human feedback overrides bot recommendations** — if a human says "don't do X" and a bot said "do X", follow the human
+- **Human reviews are NEVER auto-resolved** — only the human reviewer can dismiss their CHANGES_REQUESTED
+- **The 9-category classification does NOT apply** — human feedback is followed, not triaged
+
+For each human review body comment, the dispatched agent must:
+
+1. Read the entire review body carefully — understand the intent and constraints
+2. Read the current PR diff to assess whether changes already satisfy the feedback
+3. If the feedback is about **scope** (e.g. "never extend scope"):
+   - Review all changes in the PR for scope violations
+   - Revert or simplify any changes that violate the instruction
+4. If the feedback is about **implementation** (e.g. "endpoint should be a stub"):
+   - Make changes to match the reviewer's vision
+   - Keep it minimal — do exactly what's asked
+5. If the feedback is about **approach** (e.g. "use pattern from service Y"):
+   - Read the referenced code for the pattern
+   - Refactor to match
+6. Post a PR comment confirming what was done, referencing the reviewer's feedback
+7. **Do NOT call `resolve-thread.sh`** — human reviews have no thread to resolve
+
+**Reply format for human review comments:**
+```
+Addressing @reviewer's feedback:
+
+> [quoted feedback]
+
+[What was done / what was changed]
+```
+
+**Priority:** Human review feedback takes the highest priority. Process it BEFORE bot body findings. If human feedback conflicts with bot findings, the human wins.

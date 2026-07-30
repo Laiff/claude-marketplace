@@ -2,11 +2,11 @@
 
 ## State File
 
-Persisted at `.claude/convergence-state/<PR_NUMBER>.yaml` across cron iterations.
+Persisted at `.run/convergence-state/<PR_NUMBER>.yaml` across cron iterations.
 Read at the start of each run, written at the end.
 
 ```yaml
-# .claude/convergence-state/<PR_NUMBER>.yaml
+# .run/convergence-state/<PR_NUMBER>.yaml
 pr: 1805
 branch: "feat-FG-XXX-description"
 base_branch: "qa"
@@ -60,6 +60,7 @@ self_assessment:
     unresolved_threads: 0
     unreplied_comments: 0
     unaddressed_body_findings: 0
+    unaddressed_human_review_comments: 0
     addressed_this_iteration: 4
     classifications:
       valid_bugs: 1
@@ -80,6 +81,7 @@ self_assessment:
     all_threads_resolved: true
     all_comments_replied: true
     all_body_findings_addressed: true
+    all_human_review_comments_addressed: true
     bot_reviews_minimized: true
     converged: true
 
@@ -121,6 +123,7 @@ ALL must be true simultaneously:
 - Zero unresolved review threads
 - Zero unreplied root inline comments
 - Zero unaddressed body findings (Additional Findings from review bodies)
+- All human review body comments addressed
 - All bot review summaries minimized (Phase 6)
 
 ## Gate File Integration

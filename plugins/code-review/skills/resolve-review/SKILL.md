@@ -47,7 +47,8 @@ All scripts live in `scripts/` relative to this skill directory. Execute directl
 | `failed-run-logs.sh` | `<BRANCH> [TAIL]` | Failed CI run logs, last N lines (default 200) |
 | `resolve-thread.sh` | `<THREAD_ID>` | Resolve a single review thread via GraphQL mutation |
 | `dismiss-resolved-reviews.sh` | `<PR>` | Minimize resolved bot review summaries (RESOLVED/OUTDATED). Honors `$REPO` |
-| `body-findings.sh` | `<PR>` | Extract "Additional Findings (not in diff)" from bot review bodies → `[{review_id, author, finding_type, file, line, description, review_state}]`. Honors `$REPO` |
+| `body-findings.sh` | `<PR>` | Extract "Additional Findings (not in diff)" from bot review bodies → `[{review_id, author, finding_type, file, line, description, review_state, is_minimized}]`. Honors `$REPO` |
+| `review-comments.sh` | `<PR>` | All review body comments (human + bot) → `[{review_id, author, state, body, is_bot, is_minimized}]`. Honors `$REPO` |
 | `branch-freshness.sh` | `<BRANCH> <BASE>` | Commits ahead/behind → `{ahead, behind, recommendation}` |
 
 Scripts that query the GitHub API honor the `REPO` env var (auto-detected if unset):
@@ -63,7 +64,7 @@ Dispatch a parameter-resolution agent:
 2. If gate file given, read it to extract `metadata.pr_number` and `metadata.head_branch`
 3. Run `scripts/pr-health.sh $PR_NUMBER`
    - Exit 1 → PR is CLOSED/MERGED/DRAFT/CONFLICTING → delete cron if exists, STOP
-4. Read state file `.claude/convergence-state/$PR_NUMBER.yaml` if it exists (restores iteration count, consecutive failure tracking)
+4. Read state file `.run/convergence-state/$PR_NUMBER.yaml` if it exists (restores iteration count, consecutive failure tracking)
 5. Run `scripts/branch-freshness.sh $BRANCH $BASE` — if `behind > 5` → ESCALATE
 
 ### Phase 1 — Self-Schedule (first run only)
@@ -93,13 +94,16 @@ Dispatch agent(s) to run in parallel:
 - `scripts/unresolved-threads.sh $PR_NUMBER`
 - `scripts/unreplied-comments.sh $PR_NUMBER`
 - `scripts/body-findings.sh $PR_NUMBER`
+- `scripts/review-comments.sh $PR_NUMBER`
 
 | Result | Action |
 |--------|--------|
-| Unresolved threads, unreplied comments, or body findings exist | → Phase 5 (Address) |
+| Unresolved threads, unreplied comments, body findings, or human review comments exist | → Phase 5 (Address) |
 | All clear + CI green | → Phase 6 (Dismiss Reviews) → Phase 7 with `converged: true` |
 
-**Body findings** are review comments embedded in the review body under "Additional Findings (not in diff)". These are findings about code NOT in the PR diff — they have no GitHub review thread and would otherwise be dismissed without action. They must be addressed with the same rigor as thread-based comments.
+**Body findings** are review comments embedded in bot review bodies under "Additional Findings (not in diff)". These are findings about code NOT in the PR diff — they have no GitHub review thread and would otherwise be dismissed without action.
+
+**Human review comments** are body text from human reviewer reviews (especially CHANGES_REQUESTED). These contain high-level feedback, architectural guidance, or scope instructions that are NOT captured as inline threads. Both must be addressed with the same rigor as thread-based comments.
 
 ### Phase 4 — Fix CI Failures
 
@@ -161,9 +165,40 @@ For each body finding the agent must:
 
 **Important:** Body findings reference code NOT in the diff. The scope guard from Phase 4 is relaxed for these — if the code-review identified them as issues, they are in-scope for fixing. The agent should still verify the issue exists before acting.
 
+#### 5C — Human Review Body Comments
+
+For each non-bot review with a non-empty body (from `scripts/review-comments.sh`, filtered to `is_bot: false`), dispatch a dedicated agent.
+
+Human review bodies differ from bot findings — they contain **high-level feedback**, not structured per-file findings. Common patterns:
+- **CHANGES_REQUESTED with instructions** — e.g. "Never extend scope while fixing PR", "endpoint should be a stub"
+- **Approval with caveats** — e.g. "Approved, but please fix X before merging"
+- **Architectural guidance** — e.g. "Use the existing pattern from service Y"
+
+The agent receives:
+- Review body text, author, and state
+- Current PR diff (`gh pr diff $PR_NUMBER`)
+- Gate file path and scope (if exists)
+- Instruction to read CLAUDE.md before acting
+
+For each human review the agent must:
+1. Read the full review body carefully — understand the intent, not just keywords
+2. Read the current PR diff and changed files to assess compliance
+3. Determine if current code already satisfies the feedback or if changes are needed
+4. If changes are needed:
+   - Make the changes following the reviewer's guidance
+   - Stay minimal — address exactly what's asked, don't expand scope
+   - Commit: `fix(review): address <reviewer>'s feedback`
+   - Post a PR comment summarizing what was done
+5. If the feedback is already satisfied:
+   - Post a PR comment explaining how, with evidence (file:line references)
+6. **Never auto-resolve human reviews** — the human reviewer decides when to dismiss their CHANGES_REQUESTED. Only resolve bot threads.
+7. **Never argue with human reviewers** — if the feedback is clear, follow it. If ambiguous, follow best interpretation and note it in the PR comment.
+
+**Scope:** Human review feedback takes priority over bot scope guards. If a human reviewer says "don't do X", that overrides bot recommendations to do X.
+
 #### Post-addressing
 
-After all threads and body findings: commit fixes in a single commit `fix(review): address review feedback`, push, STOP.
+After all threads, body findings, and human review comments: commit fixes in a single commit `fix(review): address review feedback`, push, STOP.
 
 **Never re-check convergence in the same iteration that made changes.**
 
@@ -191,7 +226,7 @@ This phase is idempotent — re-running on an already-minimized review is a no-o
 
 Runs after EVERY iteration. Follow the schema in `references/self-assessment-schema.md`.
 
-1. **Persist state** to `.claude/convergence-state/$PR_NUMBER.yaml` — iteration count, timestamps, consecutive failure counters, classification totals
+1. **Persist state** to `.run/convergence-state/$PR_NUMBER.yaml` — iteration count, timestamps, consecutive failure counters, classification totals
 2. **Emit self-assessment** YAML to conversation
 3. **If gate file exists**, append iteration summary under `self_audit.iterations[]`
 
@@ -201,6 +236,7 @@ Runs after EVERY iteration. Follow the schema in `references/self-assessment-sch
 - Zero unresolved threads
 - Zero unreplied comments
 - Zero unaddressed body findings
+- All human review body comments addressed
 - All bot review summaries minimized (Phase 6 complete)
 
 If converged:
@@ -228,4 +264,4 @@ Follows CLAUDE.md rule 11 — orchestrator-only:
 
 - **`references/classification-guide.md`** — 9-category review comment classification with verification checklist and reply templates
 - **`references/self-assessment-schema.md`** — state file format, self-assessment YAML schema, escalation rules, convergence criteria
-- **`scripts/`** — 10 parameterized bash scripts, all executable directly with `bash scripts/<name>.sh <args>`
+- **`scripts/`** — 11 parameterized bash scripts, all executable directly with `bash scripts/<name>.sh <args>`
