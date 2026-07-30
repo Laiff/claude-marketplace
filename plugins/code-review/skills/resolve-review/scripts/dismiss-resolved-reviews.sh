@@ -18,7 +18,8 @@ NAME="${REPO##*/}"
 
 # GraphQL returns GitHub App bot logins WITHOUT the "[bot]" suffix
 # (e.g. "github-actions", not "github-actions[bot]")
-BOT_RE='^github-actions$|\[bot\]$|bot$'
+# Also match claude-ai-review, claude-ai-runner, etc.
+BOT_RE='^github-actions$|^claude-ai-|\[bot\]$|bot$'
 
 # Fetch all reviews and review threads with minimization state
 pr_data=$(gh api graphql \
