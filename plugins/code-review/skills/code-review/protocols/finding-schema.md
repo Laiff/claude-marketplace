@@ -47,9 +47,18 @@ prior_verification:
     file: "path/to/file.tsx"
     line: 42
     category: BUG                    # original finding category
-    status: fixed                    # fixed | not_fixed | partially_fixed
+    status: fixed                    # fixed | not_fixed | partially_fixed | deferred
     reasoning: "Fallback SelectItem now added for roles absent from availableRoles"
 ```
+
+**Status semantics** (full rules in `quality-guards.md` G12):
+
+| Status | Meaning | Blocks approval? |
+|--------|---------|------------------|
+| `fixed` | Resolved in the code. | no |
+| `partially_fixed` | Fix attempted but incomplete. | **yes** |
+| `deferred` | Valid, deliberately unchanged, documented intent + cited tracking reference. Never for CRIT. | no |
+| `not_fixed` | Everything else. | **yes** |
 
 ## Field Ownership
 
@@ -87,9 +96,11 @@ verdict:
   calibration_applied: []         # VC1-VC5 guards that modified the default verdict
   prior_verification_summary:       # only present when is_fix_verification is true
     total: 2
-    fixed: 2
+    fixed: 1
     not_fixed: 0
     partially_fixed: 0
+    deferred: 1                      # terminal — does not block approval
+    blocking: 0                      # not_fixed + partially_fixed — drives V7/VC6
     items: []                        # the prior_verification array from Phase 2
 ```
 

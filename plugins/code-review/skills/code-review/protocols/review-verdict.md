@@ -43,11 +43,14 @@ Rule V6: Only NIT findings remain
          -> COMMENT
 
 Rule V7: 0 findings after all filtering
-         IF is_fix_verification AND unfixed prior findings exist:
+         IF is_fix_verification AND prior_verification_summary.blocking > 0:
            -> COMMENT (prior findings not addressed)
          ELSE:
            -> APPROVE
 ```
+
+`blocking` counts prior findings with status `not_fixed` or `partially_fixed`.
+Statuses `fixed` and `deferred` are terminal and do not block — see VC6.
 
 ### Verdict Calibration Guards
 
@@ -85,12 +88,18 @@ These guards prevent over-aggressive or under-aggressive verdicts:
   recommendations should have been dropped by Guard G11 before reaching the verdict stage.
 - If such findings somehow survive to Phase 4, the dedup-orchestrator MUST drop them and
   log the G11 violation.
-- When `prior_verification_summary` is present and `not_fixed > 0` or `partially_fixed > 0`, 
-  the verdict MUST NOT be APPROVE even if 0 new findings exist. 
+- `blocking` = count of prior findings with status `not_fixed` or `partially_fixed`.
+  When `prior_verification_summary` is present and `blocking > 0`, the verdict MUST NOT
+  be APPROVE even if 0 new findings exist.
   Override V7 to COMMENT with reasoning noting unfixed prior findings.
-- The verdict for a fix-verification PR that correctly implements ALL prior review
-  recommendations SHOULD be APPROVE (classification: `fix-verified`). If only some are
-  fixed, use COMMENT (classification: `fix-incomplete`).
+- Statuses `fixed` and `deferred` are **terminal** and do NOT block. A PR whose only
+  outstanding prior finding is `deferred` — valid, deliberately unfixed, and covered by a
+  cited tracking reference — is APPROVE (classification: `fix-verified`). The deferral is
+  the resolution for this PR. Blocking on it makes the review un-passable, because no
+  action available inside this PR can clear it.
+- The verdict for a fix-verification PR that resolves ALL prior review findings SHOULD be
+  APPROVE (classification: `fix-verified`). If any remain `not_fixed` or `partially_fixed`,
+  use COMMENT (classification: `fix-incomplete`).
 - REQUEST_CHANGES is only appropriate if the fix itself introduces a genuinely new
   critical issue not present in the prior commit.
 
@@ -121,10 +130,10 @@ appears in the terminal summary, PR summary comment, and feedback metrics.
 2. Total = sum of all counts
 
 IF is_fix_verification AND prior_verification_summary exists:
-  IF prior_verification_summary.not_fixed > 0 OR prior_verification_summary.partially_fixed > 0:
+  IF prior_verification_summary.blocking > 0:      // not_fixed + partially_fixed
     classification = "fix-incomplete"
   ELIF total == 0:
-    classification = "fix-verified"
+    classification = "fix-verified"                 // includes deferred-with-tracking
   // else fall through to normal classification
 
 IF total == 0:

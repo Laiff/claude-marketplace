@@ -166,12 +166,47 @@ reported that prior findings remained unfixed. Result: silent auto-approval.
 
 When `is_fix_verification: true` and existing comment `dedup_keys` are present:
 
-- For EACH dedup_key, determine whether the issue was **fixed**, **not_fixed**, or
-  **partially_fixed** in the current commit by examining the diff and current code state.
+- For EACH dedup_key, determine whether the issue was **fixed**, **not_fixed**,
+  **partially_fixed**, or **deferred** in the current commit by examining the diff and
+  current code state.
 - Report your assessment in the `prior_verification` array (a top-level field alongside
-  `findings` — see `protocols/finding-schema.md` for schema).
+  `findings` — see `finding-schema.md` for schema).
 - This is SEPARATE from `findings` — it does not re-flag issues or violate G3/G11.
   It reports fix status for the verdict and compose phases.
 - Include specific reasoning: what changed (or didn't) in the code since the prior review.
 - If `is_fix_verification` is false or no `dedup_keys` exist, return an empty
   `prior_verification` array.
+
+### Status selection
+
+| Status | Meaning | Blocks approval? |
+|--------|---------|------------------|
+| `fixed` | The issue is resolved in the code. | no |
+| `partially_fixed` | A fix was attempted but is **incomplete** — the code changed, but not enough. | **yes** |
+| `deferred` | The finding is valid and the code is deliberately **unchanged**, with documented intent and a tracking reference. | no |
+| `not_fixed` | Everything else. | **yes** |
+
+**`deferred` requires BOTH of the following. If either is missing, the status is `not_fixed`:**
+
+1. An explicit statement that the gap is intentional — in the commit, the PR description,
+   or a resolved review thread. Not an inference; the author must have said so.
+2. A concrete tracking reference — a GitHub issue number, ticket id, or named follow-up
+   that actually covers the gap.
+
+**Never assign `deferred` to a CRIT severity finding.** Critical findings are either fixed
+or they block, regardless of tracking.
+
+**Do not record a deliberate, tracked deferral as `partially_fixed`.** "Tracked elsewhere"
+and "half-done" are different states and the verdict treats them differently. When an author
+documents a gap as out of scope and files a ticket for it, that IS the resolution for this
+PR — report `deferred` and cite the tracking reference in your reasoning. Recording it as
+`partially_fixed` blocks approval on work that this PR was never going to contain, which
+makes the review un-passable and forces pointless re-review cycles.
+
+**Observed failure (the reason this rule exists)**: on a PR where the sole outstanding
+finding was an infrastructure gap the author had explicitly deferred and tracked in a filed
+issue, five consecutive re-reviews correctly identified the deferral in prose — "the gap is
+intentional and deferred to ticket #NNNN" — but recorded it as `partially_fixed` because no
+other status fit. Each review returned COMMENT, re-triggering the fix pipeline, which
+correctly declined to act. The PR could not be approved by any action available to either
+agent.

@@ -102,7 +102,7 @@ const PRIOR_VERIFICATION_ITEMS = {
       file:         { type: 'string' },
       line:         { type: 'number' },
       category:     { type: 'string' },
-      status:       { type: 'string', enum: ['fixed', 'not_fixed', 'partially_fixed'] },
+      status:       { type: 'string', enum: ['fixed', 'not_fixed', 'partially_fixed', 'deferred'] },
       reasoning:    { type: 'string' },
     },
   },
@@ -245,7 +245,11 @@ MANDATORY QUALITY GUARDS:
 - G11 FIX-VERIFICATION: If is_fix_verification is true, do NOT contradict prior review
   recommendations. Only flag genuinely NEW issues since prior review commit.
 - G12 PRIOR VERIFICATION: If is_fix_verification is true, for EACH existing dedup_key,
-  report whether the issue was fixed/not_fixed/partially_fixed in prior_verification[].
+  report whether the issue was fixed/not_fixed/partially_fixed/deferred in prior_verification[].
+  Use "deferred" ONLY when the finding is valid and unfixed BY DECISION and the commit,
+  PR description, or resolved thread cites a concrete tracking reference (issue/ticket id).
+  Never "deferred" for CRIT findings. "partially_fixed" means the fix is incomplete —
+  not that the work was postponed.
   This is SEPARATE from findings[] — it reports fix status, not new issues.`
 
 const FINDING_INIT_FIELDS = `
@@ -488,10 +492,28 @@ Return a JSON object with:
 - "prior_verification" array (fix status of each existing dedup_key — empty if not fix-verification)
 
 PRIOR VERIFICATION (G12): If is_fix_verification is true AND dedup_keys exist above,
-for EACH dedup_key determine whether the prior issue was fixed, not_fixed, or partially_fixed
-in the current commit. Examine the diff and current code. Return one entry per dedup_key:
-{ dedup_key, description (1-line summary), file, line, category, status, reasoning }.
-If is_fix_verification is false or no dedup_keys, return prior_verification: [].`
+for EACH dedup_key determine whether the prior issue was fixed, not_fixed, partially_fixed,
+or deferred in the current commit. Examine the diff and current code. Return one entry per
+dedup_key: { dedup_key, description (1-line summary), file, line, category, status, reasoning }.
+If is_fix_verification is false or no dedup_keys, return prior_verification: [].
+
+STATUS SELECTION — read carefully, this drives the verdict:
+- fixed            — the issue is resolved in the code.
+- partially_fixed  — a fix was attempted but is INCOMPLETE. The code changed, but not enough.
+- deferred         — the finding is valid and the code is deliberately UNCHANGED, and the
+                     author has established BOTH (a) an explicit statement that the gap is
+                     intentional (in the commit, PR description, or a resolved review thread)
+                     AND (b) a concrete tracking reference — a GitHub issue number, ticket id,
+                     or named follow-up that covers the gap.
+                     NEVER use deferred for a CRIT severity finding.
+                     A deferral with no tracking reference is not_fixed, not deferred.
+- not_fixed        — everything else.
+
+Do NOT record a deliberate, tracked deferral as partially_fixed. "Tracked elsewhere" and
+"half-done" are different states and the verdict treats them differently: deferred is
+terminal and non-blocking, partially_fixed blocks approval. If the author documented the
+gap and filed a ticket, that IS the resolution for this PR — say deferred and cite the
+tracking reference in your reasoning.`
 
 const [rawConv, rawBug, rawSec] = await parallel([
   // ── 2A: Convention Checker ──
@@ -594,19 +616,25 @@ for (const v of rawPriorVerification) {
   }
 }
 const priorVerification = [...priorVerificationMap.values()]
+// `blocking` drives VC6. Statuses `fixed` and `deferred` are TERMINAL: a deliberate,
+// tracked deferral is a resolution for this PR, not an outstanding defect. Only an
+// unfixed or half-fixed finding withholds approval.
 const priorVerificationSummary = priorVerification.length > 0
   ? {
       total:            priorVerification.length,
       fixed:            priorVerification.filter(v => v.status === 'fixed').length,
       not_fixed:        priorVerification.filter(v => v.status === 'not_fixed').length,
       partially_fixed:  priorVerification.filter(v => v.status === 'partially_fixed').length,
+      deferred:         priorVerification.filter(v => v.status === 'deferred').length,
+      blocking:         priorVerification.filter(v => v.status === 'not_fixed'
+                                                   || v.status === 'partially_fixed').length,
       items:            priorVerification,
     }
   : null
 
 log(`[Phase 2] ${allFindings.length} findings (conv: ${convCount}, bug: ${bugCount}, sec: ${secCount})`)
 if (priorVerificationSummary) {
-  log(`[Phase 2] Prior verification: ${priorVerificationSummary.fixed}/${priorVerificationSummary.total} fixed, ${priorVerificationSummary.not_fixed} not fixed, ${priorVerificationSummary.partially_fixed} partially fixed`)
+  log(`[Phase 2] Prior verification: ${priorVerificationSummary.fixed}/${priorVerificationSummary.total} fixed, ${priorVerificationSummary.not_fixed} not fixed, ${priorVerificationSummary.partially_fixed} partially fixed, ${priorVerificationSummary.deferred} deferred → ${priorVerificationSummary.blocking} blocking`)
 }
 
 
@@ -618,23 +646,23 @@ if (priorVerificationSummary) {
 if (allFindings.length === 0) {
   // ── Fix-verification: check if prior findings remain unfixed (VC6) ────────
   const hasUnfixedPrior = isFixVerification && priorVerificationSummary
-    && (priorVerificationSummary.not_fixed > 0 || priorVerificationSummary.partially_fixed > 0)
-  const allPriorFixed = isFixVerification && priorVerificationSummary
-    && priorVerificationSummary.not_fixed === 0 && priorVerificationSummary.partially_fixed === 0
+    && priorVerificationSummary.blocking > 0
+  const allPriorResolved = isFixVerification && priorVerificationSummary
+    && priorVerificationSummary.blocking === 0
 
-  const shortCircuitVerdict  = hasUnfixedPrior ? 'COMMENT' : 'APPROVE'
-  const shortCircuitClass    = hasUnfixedPrior ? 'fix-incomplete'
-                             : allPriorFixed   ? 'fix-verified'
-                             :                   'clean'
+  const shortCircuitVerdict  = hasUnfixedPrior  ? 'COMMENT' : 'APPROVE'
+  const shortCircuitClass    = hasUnfixedPrior  ? 'fix-incomplete'
+                             : allPriorResolved ? 'fix-verified'
+                             :                    'clean'
   const shortCircuitIcon     = hasUnfixedPrior ? ':mag:' : ':white_check_mark:'
-  const shortCircuitLabel    = hasUnfixedPrior ? 'Fix Incomplete' : allPriorFixed ? 'Fix Verified' : 'Clean'
+  const shortCircuitLabel    = hasUnfixedPrior ? 'Fix Incomplete' : allPriorResolved ? 'Fix Verified' : 'Clean'
   const shortCircuitRule     = hasUnfixedPrior ? 'V7+VC6' : 'V7'
   const shortCircuitFlag     = hasUnfixedPrior ? '--comment' : '--approve'
 
   if (hasUnfixedPrior) {
-    log(`0 new findings but ${priorVerificationSummary.not_fixed} prior findings NOT fixed — COMMENT verdict (VC6 override)`)
-  } else if (allPriorFixed) {
-    log(`0 new findings, all ${priorVerificationSummary.total} prior findings verified fixed — APPROVE (fix-verified)`)
+    log(`0 new findings but ${priorVerificationSummary.blocking} prior findings still blocking — COMMENT verdict (VC6 override)`)
+  } else if (allPriorResolved) {
+    log(`0 new findings, all ${priorVerificationSummary.total} prior findings resolved (${priorVerificationSummary.fixed} fixed, ${priorVerificationSummary.deferred} deferred) — APPROVE (fix-verified)`)
   } else {
     log('0 findings — clean PR, skipping Phase 3+4')
   }
@@ -645,22 +673,28 @@ if (allFindings.length === 0) {
       `| # | Status | File | Prior Issue | Verification |\n` +
       `|---|--------|------|-------------|---------------|\n` +
       priorVerificationSummary.items.map((v, i) => {
-        const icon = v.status === 'fixed' ? ':white_check_mark: Fixed'
+        const icon = v.status === 'fixed'           ? ':white_check_mark: Fixed'
+                   : v.status === 'deferred'        ? ':outbox_tray: Deferred'
                    : v.status === 'partially_fixed' ? ':warning: Partial'
-                   : ':x: Not Fixed'
+                   :                                  ':x: Not Fixed'
         return `| ${i + 1} | ${icon} | \`${v.file}:${v.line}\` | ${v.description} | ${v.reasoning} |`
       }).join('\n') +
       `\n`
     : ''
 
   const verificationStats = priorVerificationSummary
-    ? `Prior verification: ${priorVerificationSummary.fixed}/${priorVerificationSummary.total} fixed`
+    ? `Prior verification: ${priorVerificationSummary.fixed}/${priorVerificationSummary.total} fixed` +
+      (priorVerificationSummary.deferred > 0 ? `, ${priorVerificationSummary.deferred} deferred` : '')
     : ''
 
   const shortCircuitReasoning = hasUnfixedPrior
-    ? `0 new issues, but ${priorVerificationSummary.not_fixed} prior findings remain unfixed`
-    : allPriorFixed
-    ? `All ${priorVerificationSummary.total} prior findings verified as fixed, no new issues`
+    ? `0 new issues, but ${priorVerificationSummary.blocking} prior findings remain unfixed`
+    : allPriorResolved
+    ? `All ${priorVerificationSummary.total} prior findings resolved` +
+      (priorVerificationSummary.deferred > 0
+        ? ` (${priorVerificationSummary.fixed} fixed, ${priorVerificationSummary.deferred} deferred with tracking)`
+        : ` as fixed`) +
+      `, no new issues`
     : `No issues found. Reviewed ${prSummary.files_changed} files for bugs, CLAUDE.md compliance, and security.`
 
   phase('Compose')
