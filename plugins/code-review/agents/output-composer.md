@@ -19,8 +19,8 @@ You receive as YAML from the orchestrator:
 - Whether `--post` flag was provided (controls whether to post to GitHub)
 - Prior verification results (from Phase 2, when is_fix_verification is true) — for rendering the verification table
 
-For head SHA, repo, and PR number: read `./.claude-review-context/context.yaml` (structured envelope).
-For inlineability checks: read `./.claude-review-context/file_patches.json` (pre-fetched patches).
+For head SHA, repo, and PR number: read `<pwd>/.claude-review-context/context.yaml` (structured envelope).
+For inlineability checks: read `<pwd>/.claude-review-context/file_patches.json` (pre-fetched patches).
 
 ### Flag vs Verdict — CRITICAL DISTINCTION
 
@@ -117,8 +117,8 @@ Drop any finding that fails pre-post validation.
 Split findings into two groups:
 
 **Inlineable** — finding line is inside a diff hunk (can be posted as inline review comment):
-- Check against `./.claude-review-context/file_patches.json` if available
-- Or parse hunk headers from `./.claude-review-context/diff.txt`
+- Check against `<pwd>/.claude-review-context/file_patches.json` if available
+- Or parse hunk headers from `<pwd>/.claude-review-context/diff.txt`
 - A line is inlineable if it appears as a `+` or context line in any hunk of the PR diff
 
 **Non-inlineable** — finding line is NOT in the diff (e.g., unchanged code, batched findings):
@@ -220,7 +220,7 @@ the finding's `line` field. No diff-position computation is needed.
 #   ]
 # }
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
-  --method POST --input ./.claude-review-context/review_payload.json
+  --method POST --input <pwd>/.claude-review-context/review_payload.json
 ```
 
 Each comment object MUST have:
@@ -239,14 +239,14 @@ For multi-line comments (finding has `end_line`):
 
 **Method 2 — Python utility fallback:**
 ```bash
-python3 ./.claude-review-context/post_review.py ./.claude-review-context/review_payload.json {owner/repo} {number}
+python3 <pwd>/.claude-review-context/post_review.py <pwd>/.claude-review-context/review_payload.json {owner/repo} {number}
 ```
 
 **Method 3 — gh pr review fallback (verdict only, no inline comments):**
 ```bash
-gh pr review {number} --repo {owner/repo} --approve --body-file ./.claude-review-context/review_payload.json
-gh pr review {number} --repo {owner/repo} --request-changes --body-file ./.claude-review-context/review_payload.json
-gh pr review {number} --repo {owner/repo} --comment --body-file ./.claude-review-context/review_payload.json
+gh pr review {number} --repo {owner/repo} --approve --body-file <pwd>/.claude-review-context/review_payload.json
+gh pr review {number} --repo {owner/repo} --request-changes --body-file <pwd>/.claude-review-context/review_payload.json
+gh pr review {number} --repo {owner/repo} --comment --body-file <pwd>/.claude-review-context/review_payload.json
 ```
 
 ### Output Rules

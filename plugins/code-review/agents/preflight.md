@@ -39,9 +39,9 @@ Evaluate in order. Stop on the first failure:
 ## How to check
 
 **ALWAYS try pre-fetched data FIRST (avoids redundant API calls):**
-- Read `./.claude-review-context/pr_meta.yaml` for PR state (title, body, files, SHAs)
-- Read `./.claude-review-context/prior_reviews.yaml` for existing bot reviews and threads
-- Read `./.claude-review-context/context.yaml` for head SHA and PR metadata
+- Read `<pwd>/.claude-review-context/pr_meta.yaml` for PR state (title, body, files, SHAs)
+- Read `<pwd>/.claude-review-context/prior_reviews.yaml` for existing bot reviews and threads
+- Read `<pwd>/.claude-review-context/context.yaml` for head SHA and PR metadata
 
 **Only fall back to API if pre-fetched files do not exist or are empty:**
 ```bash

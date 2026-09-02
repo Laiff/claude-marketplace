@@ -14,7 +14,7 @@ are public-facing.
 
 You receive as YAML from the orchestrator:
 - PR summary (from pr-summarizer) — use `scope` to understand deployment context
-- PR diff (from `./.claude-review-context/diff.txt` ensure read it completelly or inline)
+- PR diff (from `<pwd>/.claude-review-context/diff.txt` ensure read it completelly or inline)
 - CLAUDE.md content — for project-specific security requirements
 - Existing comment dedup keys (from comment-scanner)
 

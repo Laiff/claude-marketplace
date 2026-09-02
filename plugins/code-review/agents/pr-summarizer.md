@@ -12,15 +12,15 @@ to understand the INTENT behind the changes, not just the mechanics.
 ## Steps
 
 1. Read PR metadata:
-   - **ALWAYS try `./.claude-review-context/pr_meta.yaml` FIRST** (YAML format, pre-fetched)
+   - **ALWAYS try `<pwd>/.claude-review-context/pr_meta.yaml` FIRST** (YAML format, pre-fetched)
    - Only fall back to `gh pr view` if the file does not exist or is empty
 
 2. Read the diff:
-   - **ALWAYS try `./.claude-review-context/diff.txt` FIRST** (pre-fetched)
+   - **ALWAYS try `<pwd>/.claude-review-context/diff.txt` FIRST** (pre-fetched)
    - Only fall back to `gh pr diff` if the file does not exist or is empty
 
 3. Read prior review context:
-   - **ALWAYS try `./.claude-review-context/prior_reviews.yaml` FIRST** (pre-fetched)
+   - **ALWAYS try `<pwd>/.claude-review-context/prior_reviews.yaml` FIRST** (pre-fetched)
    - Use this to detect fix-verification scenarios and extract prior findings
    - Only fall back to `gh api` if the file does not exist
 
@@ -63,7 +63,7 @@ pr_summary:
 ### Fix-verification detection
 
 Check if this is a fix-verification scenario:
-- Read `./.claude-review-context/prior_reviews.yaml` (or use preflight output)
+- Read `<pwd>/.claude-review-context/prior_reviews.yaml` (or use preflight output)
 - If a prior bot review exists on an OLDER commit (different SHA than current HEAD):
   - Set `is_fix_verification: true`
   - Set `prior_review_commit` to the prior review's commit SHA
